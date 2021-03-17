@@ -56,6 +56,7 @@ function gutenberg_reregister_core_block_types() {
 					'cover.php'                     => 'core/cover',
 					'latest-comments.php'           => 'core/latest-comments',
 					'latest-posts.php'              => 'core/latest-posts',
+					'legacy-widget.php'             => 'core/legacy-widget',
 					'navigation.php'                => 'core/navigation',
 					'navigation-link.php'           => 'core/navigation-link',
 					'rss.php'                       => 'core/rss',
@@ -98,12 +99,12 @@ function gutenberg_reregister_core_block_types() {
 		),
 		__DIR__ . '/../build/edit-widgets/blocks/'  => array(
 			'block_folders' => array(
-				'legacy-widget',
+				// 'legacy-widget',
 				'widget-area',
 			),
 			'block_names'   => array(
-				'legacy-widget.php' => 'core/legacy-widget',
-				'widget-area.php'   => 'core/widget-area',
+				// 'legacy-widget.php' => 'core/legacy-widget',
+				'widget-area.php' => 'core/widget-area',
 			),
 		),
 	);

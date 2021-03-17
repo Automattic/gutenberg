@@ -38,6 +38,7 @@ import * as navigation from './navigation';
 import * as navigationLink from './navigation-link';
 import * as latestComments from './latest-comments';
 import * as latestPosts from './latest-posts';
+import * as legacyWidget from './legacy-widget';
 import * as list from './list';
 import * as missing from './missing';
 import * as more from './more';
@@ -212,6 +213,7 @@ export const __experimentalRegisterExperimentalCoreBlocks =
 				[
 					navigation,
 					navigationLink,
+					legacyWidget,
 
 					// Register Full Site Editing Blocks.
 					...( enableFSEBlocks

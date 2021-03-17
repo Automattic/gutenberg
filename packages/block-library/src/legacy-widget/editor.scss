@@ -1,0 +1,30 @@
+.wp-block-legacy-widget__edit-form {
+	background: $white;
+	border: $border-width solid $gray-900;
+
+	.wp-block-legacy-widget__edit-form-title {
+		border-bottom: $border-width solid $gray-900;
+		color: $black;
+		font-family: $default-font;
+		font-size: $default-font-size;
+		font-weight: 600;
+		margin: 0;
+		padding: $block-padding 18px;
+	}
+
+	.wp-block-legacy-widget__edit-form-fields {
+		padding: $grid-unit-10 $block-padding;
+	}
+
+	// Reset z-index set on https://github.com/WordPress/wordpress-develop/commit/f26d4d37351a55fd1fc5dad0f5fef8f0f964908c.
+	.widget.open {
+		z-index: 0;
+	}
+
+	.widget-inside {
+		border: none;
+		display: block;
+		font-family: $default-font;
+		font-size: $default-font-size;
+	}
+}
