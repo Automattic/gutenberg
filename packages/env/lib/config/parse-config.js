@@ -231,6 +231,7 @@ async function getDefaultConfig(
 			afterClean: null,
 			afterDestroy: null,
 		},
+		dockerCompose: null,
 		env: {
 			development: {},
 			tests: {
@@ -352,6 +353,18 @@ async function parseRootConfig( configFile, rawConfig, options ) {
 		parsedConfig.lifecycleScripts = rawConfig.lifecycleScripts;
 	}
 
+	// Parse the docker-compose config.
+	if ( rawConfig.dockerCompose !== undefined ) {
+		checkObjectWithValues(
+			configFile,
+			'dockerCompose',
+			rawConfig.dockerCompose,
+			[ 'object' ],
+			false
+		);
+		parsedConfig.dockerCompose = rawConfig.dockerCompose;
+	}
+
 	// Parse the environment-specific configs so they're accessible to the root.
 	parsedConfig.env = {};
 	if ( rawConfig.env ) {
@@ -413,6 +426,7 @@ async function parseEnvironmentConfig(
 		switch ( key ) {
 			case 'testsPort':
 			case 'lifecycleScripts':
+			case 'dockerCompose':
 			case 'env': {
 				if ( options.rootConfig ) {
 					continue;

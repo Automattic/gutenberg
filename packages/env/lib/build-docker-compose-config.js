@@ -164,8 +164,13 @@ module.exports = function buildDockerComposeConfig( config ) {
 		);
 	}
 
+	const shouldExposePort = ! Object.keys(
+		config.dockerCompose?.services
+	).includes( 'cloudflare-tunnel' );
 	// Set the default ports based on the config values.
-	const developmentPorts = `\${WP_ENV_PORT:-${ config.env.development.port }}:80`;
+	const developmentPorts = shouldExposePort
+		? { ports: [ `\${WP_ENV_PORT:-${ config.env.development.port }}:80` ] }
+		: {};
 	const testsPorts = `\${WP_ENV_TESTS_PORT:-${ config.env.tests.port }}:80`;
 
 	return {
@@ -200,7 +205,8 @@ module.exports = function buildDockerComposeConfig( config ) {
 					dockerfile: 'WordPress.Dockerfile',
 					args: imageBuildArgs,
 				},
-				ports: [ developmentPorts ],
+				...developmentPorts,
+				// ports: [ developmentPorts ],
 				environment: {
 					APACHE_RUN_USER: '#' + hostUser.uid,
 					APACHE_RUN_GROUP: '#' + hostUser.gid,
@@ -261,6 +267,7 @@ module.exports = function buildDockerComposeConfig( config ) {
 				},
 				extra_hosts: [ 'host.docker.internal:host-gateway' ],
 			},
+			...config.dockerCompose?.services,
 		},
 		volumes: {
 			...( ! config.env.development.coreSource && { wordpress: {} } ),

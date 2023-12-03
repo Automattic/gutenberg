@@ -170,8 +170,15 @@ module.exports = async function start( {
 
 	spinner.text = 'Starting WordPress.';
 
+	const extraServices = config?.dockerCompose?.services || {};
 	await dockerCompose.upMany(
-		[ 'wordpress', 'tests-wordpress', 'cli', 'tests-cli' ],
+		[
+			'wordpress',
+			'tests-wordpress',
+			'cli',
+			'tests-cli',
+			...Object.keys( extraServices ),
+		],
 		{
 			...dockerComposeConfig,
 			commandOptions: shouldConfigureWp
