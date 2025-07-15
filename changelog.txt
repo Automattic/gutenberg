@@ -1,5 +1,12 @@
 == Changelog ==
 
+= 21.2.0-rc.2 =
+
+- iAPI Router: Preserve media attribute on intial style sheets after client-side navigation (#70668)
+- wp-env: Fix Docker build errors with Debian Buster repositories (#70718)
+- Block Editor: Avoid unbound requests in inserter selectors (#66817)
+
+
 = 21.2.0-rc.1 =
 
 ## Changelog
