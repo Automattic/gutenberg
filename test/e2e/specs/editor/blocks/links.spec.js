@@ -116,7 +116,7 @@ test.describe( 'Links', () => {
 
 		await expect(
 			page.getByRole( 'combobox', {
-				name: 'Link',
+				name: 'Search or type URL',
 			} )
 		).toHaveValue( '' );
 	} );
@@ -361,7 +361,7 @@ test.describe( 'Links', () => {
 		await pageUtils.pressKeys( 'primary+k' );
 
 		const urlInput = page.getByRole( 'combobox', {
-			name: 'Link',
+			name: 'Search or type URL',
 		} );
 
 		// Expect the "Link" combobox to be visible and focused

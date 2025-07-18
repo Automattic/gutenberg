@@ -1,13 +1,6 @@
 == Changelog ==
 
-= 21.2.0-rc.2 =
-
-- iAPI Router: Preserve media attribute on intial style sheets after client-side navigation (#70668)
-- wp-env: Fix Docker build errors with Debian Buster repositories (#70718)
-- Block Editor: Avoid unbound requests in inserter selectors (#66817)
-
-
-= 21.2.0-rc.1 =
+= 21.2.0 =
 
 ## Changelog
 
@@ -48,6 +41,9 @@
 
 ### Bug Fixes
 
+- iAPI Router: Preserve media attribute on intial style sheets after client-side navigation (#70668)
+- wp-env: Fix Docker build errors with Debian Buster repositories (#70718)
+- Block Editor: Avoid unbound requests in inserter selectors (#66817)
 #### Block Library
 - Cover: Fixed resetAll to return image resolution to default value. ([70608](https://github.com/WordPress/gutenberg/pull/70608))
 - Featured Image: Fixed resetAll to return image resolution to default value. ([70514](https://github.com/WordPress/gutenberg/pull/70514))
@@ -135,6 +131,8 @@ The following PRs were merged by first-time contributors:
 The following contributors merged PRs in this release:
 
 @Adi-ty @arthur791004 @BugReportOnWeb @chihsuan @coderGtm @DAreRodz @ellatrix @himanshupathak95 @Infinite-Null @jameskoster @jasmussen @Lovor01 @Mamaduka @mecskyverse @p-jackson @R1shabh-Gupta @sejas @shimotmk @sirreal @Sukhendu2002 @swissspidy @t-hamano @USERSATOSHI @yogeshbhutkar @youknowriad
+
+
 
 
 = 21.1.1 =

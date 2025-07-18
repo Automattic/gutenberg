@@ -1,7 +1,7 @@
 // Include the default WP Components color variables.
 // TODO: Remove this once all admin-scheme variables are accounted for in the wp-components fallback values.
 :root {
-	@include admin-scheme(#3858e9);
+	@include admin-scheme( #3858e9 );
 }
 
 // Variables
@@ -55,3 +55,4 @@
 @import "./toolbar/toolbar-button/style.scss";
 @import "./toolbar/toolbar-group/style.scss";
 @import "./tooltip/style.scss";
+@import "./validated-form-controls/style.scss";

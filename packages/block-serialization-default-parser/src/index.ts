@@ -1,49 +1,33 @@
-/**
- * @type {string}
- */
-let document;
-/**
- * @type {number}
- */
-let offset;
-/**
- * @type {ParsedBlock[]}
- */
-let output;
-/**
- * @type {ParsedFrame[]}
- */
-let stack;
+let document: string;
+let offset: number;
+let output: ParsedBlock[];
+let stack: ParsedFrame[];
 
-/**
- * @typedef {Object|null} Attributes
- */
+type Attributes = Record< string, any > | null;
 
-/**
- * @typedef {Object} ParsedBlock
- * @property {string|null}        blockName    Block name.
- * @property {Attributes}         attrs        Block attributes.
- * @property {ParsedBlock[]}      innerBlocks  Inner blocks.
- * @property {string}             innerHTML    Inner HTML.
- * @property {Array<string|null>} innerContent Inner content.
- */
+type ParsedBlock = {
+	blockName: string | null;
+	attrs: Attributes;
+	innerBlocks: ParsedBlock[];
+	innerHTML: string;
+	innerContent: Array< string | null >;
+};
 
-/**
- * @typedef {Object} ParsedFrame
- * @property {ParsedBlock} block            Block.
- * @property {number}      tokenStart       Token start.
- * @property {number}      tokenLength      Token length.
- * @property {number}      prevOffset       Previous offset.
- * @property {number|null} leadingHtmlStart Leading HTML start.
- */
+type ParsedFrame = {
+	block: ParsedBlock;
+	tokenStart: number;
+	tokenLength: number;
+	prevOffset: number;
+	leadingHtmlStart: number | null;
+};
 
-/**
- * @typedef {'no-more-tokens'|'void-block'|'block-opener'|'block-closer'} TokenType
- */
+type TokenType =
+	| 'no-more-tokens'
+	| 'void-block'
+	| 'block-opener'
+	| 'block-closer';
 
-/**
- * @typedef {[TokenType, string, Attributes, number, number]} Token
- */
+type Token = [ TokenType, string, Attributes, number, number ];
 
 /**
  * Matches block comment delimiters
@@ -81,8 +65,6 @@ let stack;
  *    once browsers reliably support atomic grouping or possessive
  *    quantifiers natively we should remove this trick and simplify
  *
- * @type {RegExp}
- *
  * @since 3.8.0
  * @since 4.6.1 added optimization to prevent backtracking on attribute parsing
  */
@@ -92,14 +74,21 @@ const tokenizer =
 /**
  * Constructs a block object.
  *
- * @param {string|null}   blockName
- * @param {Attributes}    attrs
- * @param {ParsedBlock[]} innerBlocks
- * @param {string}        innerHTML
- * @param {string[]}      innerContent
- * @return {ParsedBlock} The block object.
+ * @param blockName    Either the abbreviated core types, e.g. "paragraph", or the fully-qualified
+ *                     block type with namespace and type, e.g. "core/paragraph" or "my-plugin/csv-table".
+ * @param attrs        The attributes for the block, or null if there are no attributes.
+ * @param innerBlocks  An array of inner blocks.
+ * @param innerHTML    The inner HTML of the block.
+ * @param innerContent An array of inner content strings.
+ * @return The block object.
  */
-function Block( blockName, attrs, innerBlocks, innerHTML, innerContent ) {
+function Block(
+	blockName: string | null,
+	attrs: Attributes,
+	innerBlocks: ParsedBlock[],
+	innerHTML: string,
+	innerContent: string[]
+): ParsedBlock {
 	return {
 		blockName,
 		attrs,
@@ -112,24 +101,30 @@ function Block( blockName, attrs, innerBlocks, innerHTML, innerContent ) {
 /**
  * Constructs a freeform block object.
  *
- * @param {string} innerHTML
- * @return {ParsedBlock} The freeform block object.
+ * @param innerHTML The inner HTML of the block.
+ * @return The freeform block object.
  */
-function Freeform( innerHTML ) {
+function Freeform( innerHTML: string ): ParsedBlock {
 	return Block( null, {}, [], innerHTML, [ innerHTML ] );
 }
 
 /**
  * Constructs a frame object.
  *
- * @param {ParsedBlock} block
- * @param {number}      tokenStart
- * @param {number}      tokenLength
- * @param {number}      prevOffset
- * @param {number|null} leadingHtmlStart
- * @return {ParsedFrame} The frame object.
+ * @param block            The block object.
+ * @param tokenStart       The start offset of the token in the document.
+ * @param tokenLength      The length of the token in the document.
+ * @param prevOffset       The offset of the previous token in the document.
+ * @param leadingHtmlStart The start offset of leading HTML before the block.
+ * @return The frame object.
  */
-function Frame( block, tokenStart, tokenLength, prevOffset, leadingHtmlStart ) {
+function Frame(
+	block: ParsedBlock,
+	tokenStart: number,
+	tokenLength: number,
+	prevOffset: number | null,
+	leadingHtmlStart: number | null
+): ParsedFrame {
 	return {
 		block,
 		tokenStart,
@@ -142,7 +137,7 @@ function Frame( block, tokenStart, tokenLength, prevOffset, leadingHtmlStart ) {
 /**
  * Parser function, that converts input HTML into a block based structure.
  *
- * @param {string} doc The HTML document to parse.
+ * @param doc The HTML document to parse.
  *
  * @example
  * Input post:
@@ -214,9 +209,9 @@ function Frame( block, tokenStart, tokenLength, prevOffset, leadingHtmlStart ) {
  *     }
  * ];
  * ```
- * @return {ParsedBlock[]} A block-based representation of the input HTML.
+ * @return A block-based representation of the input HTML.
  */
-export const parse = ( doc ) => {
+export const parse = ( doc: string ): ParsedBlock[] => {
 	document = doc;
 	offset = 0;
 	output = [];
@@ -233,9 +228,9 @@ export const parse = ( doc ) => {
 /**
  * Parses the next token in the input document.
  *
- * @return {boolean} Returns true when there is more tokens to parse.
+ * @return Returns true when there is more tokens to parse.
  */
-function proceed() {
+function proceed(): boolean {
 	const stackDepth = stack.length;
 	const next = nextToken();
 	const [ tokenType, blockName, attrs, startOffset, tokenLength ] = next;
@@ -333,7 +328,7 @@ function proceed() {
 
 			// Otherwise we're nested and we have to close out the current
 			// block and add it as a innerBlock to the parent.
-			const stackTop = /** @type {ParsedFrame} */ ( stack.pop() );
+			const stackTop = stack.pop() as ParsedFrame;
 			const html = document.substr(
 				stackTop.prevOffset,
 				startOffset - stackTop.prevOffset
@@ -365,10 +360,10 @@ function proceed() {
  * delimiters is constrained to be an object
  * and cannot be things like `true` or `null`
  *
- * @param {string} input JSON input string to parse
- * @return {Object|null} parsed JSON if valid
+ * @param input JSON input string to parse
+ * @return parsed JSON if valid or null if invalid
  */
-function parseJSON( input ) {
+function parseJSON( input: string ): Object | null {
 	try {
 		return JSON.parse( input );
 	} catch ( e ) {
@@ -379,9 +374,9 @@ function parseJSON( input ) {
 /**
  * Finds the next token in the document.
  *
- * @return {Token} The next matched token.
+ * @return The next matched token.
  */
-function nextToken() {
+function nextToken(): Token {
 	// Aye the magic
 	// we're using a single RegExp to tokenize the block comment delimiters
 	// we're also using a trick here because the only difference between a
@@ -435,9 +430,9 @@ function nextToken() {
 /**
  * Adds a freeform block to the output.
  *
- * @param {number} [rawLength]
+ * @param rawLength Optional length of the raw HTML to include as freeform content.
  */
-function addFreeform( rawLength ) {
+function addFreeform( rawLength?: number ) {
 	const length = rawLength ? rawLength : document.length - offset;
 
 	if ( 0 === length ) {
@@ -450,12 +445,18 @@ function addFreeform( rawLength ) {
 /**
  * Adds inner block to the parent block.
  *
- * @param {ParsedBlock} block
- * @param {number}      tokenStart
- * @param {number}      tokenLength
- * @param {number}      [lastOffset]
+ * @param block       The inner block to be added to the parent.
+ * @param tokenStart  The start offset of the block token in the document.
+ * @param tokenLength The total length of the block token.
+ * @param lastOffset  Optional offset marking the end of the current block,
+ *                    used to update the parent's HTML content boundaries.
  */
-function addInnerBlock( block, tokenStart, tokenLength, lastOffset ) {
+function addInnerBlock(
+	block: ParsedBlock,
+	tokenStart: number,
+	tokenLength: number,
+	lastOffset?: number
+) {
 	const parent = stack[ stack.length - 1 ];
 	parent.block.innerBlocks.push( block );
 	const html = document.substr(
@@ -475,11 +476,11 @@ function addInnerBlock( block, tokenStart, tokenLength, lastOffset ) {
 /**
  * Adds block from the stack to the output.
  *
- * @param {number} [endOffset]
+ * @param endOffset Optional offset marking the end of the block's HTML content.
  */
-function addBlockFromStack( endOffset ) {
+function addBlockFromStack( endOffset?: number ) {
 	const { block, leadingHtmlStart, prevOffset, tokenStart } =
-		/** @type {ParsedFrame} */ ( stack.pop() );
+		stack.pop() as ParsedFrame;
 
 	const html = endOffset
 		? document.substr( prevOffset, endOffset - prevOffset )

@@ -78,6 +78,7 @@ export const processBlockType =
 		const bootstrappedBlockType = select.getBootstrappedBlockType( name );
 
 		const blockType = {
+			apiVersion: 1,
 			name,
 			icon: BLOCK_ICON_DEFAULT,
 			keywords: [],
