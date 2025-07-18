@@ -290,12 +290,13 @@ information.
   faster protocol like y-webrtc or y-websockets.
 - The y-webrtc extension may be used as progressive enhancement to enable
   realtime collaboration.
+- Undo/redo works.
 
 ### Does not work
 
 - Some more complex blog types seem to have buggy behavior (e.g. gallery block
   type when deleting images). This can be fixed with more user feedback.
-- Undo/redo does not work.
+- Undo/redo has some bugs right now, and can be fixed with more feedback.
 - Entities
 	- Not all entities are synced. For example, global styles are not. Look at
 	  the `base` entity config for an example (it declares `syncConfig` and
