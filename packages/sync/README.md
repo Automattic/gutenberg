@@ -49,7 +49,7 @@ Function that creates a new WebSocket Connection.
 
 _Parameters_
 
--   _config_ `WebsocketConnectionConfig`: The configuration for the WebSocket connection.
+-   _config_ `WebSocketConnectionConfig`: The configuration for the WebSocket connection.
 
 _Returns_
 

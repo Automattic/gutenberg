@@ -12,32 +12,45 @@ type WebsocketProviderConstructorArgs = ConstructorParameters<
 	typeof WebsocketProvider
 >;
 
-interface WebsocketConnectionConfig {
+interface WebSocketConnectionConfig {
 	options?: WebsocketProviderConstructorArgs[ 3 ];
-	password?: string; // TODO: Use this to authorize the connection
+	password?: string;
 	serverUrl: string;
+	configureProvider?: (
+		provider: WebsocketProvider,
+		syncObjectType: string,
+		syncObjectId: string
+	) => Promise< void >;
 }
 
 /**
  * Function that creates a new WebSocket Connection.
  *
- * @param {WebsocketConnectionConfig} config The configuration for the WebSocket connection.
+ * @param {WebSocketConnectionConfig} config The configuration for the WebSocket connection.
  * @return {ConnectDoc} A function that connects a Y.Doc to a WebSocket server.
  */
 export function createWebSocketConnection(
-	config: WebsocketConnectionConfig
+	config: WebSocketConnectionConfig
 ): ConnectDoc {
 	return async function ( objectId: string, objectType: string, doc: Y.Doc ) {
 		const roomName = `${ objectType }-${ objectId }`;
 		let provider = null;
 
 		try {
-			provider = new WebsocketProvider(
-				config.serverUrl,
-				roomName,
-				doc,
-				config.options
-			);
+			provider = new WebsocketProvider( config.serverUrl, roomName, doc, {
+				...config.options,
+			} );
+
+			/**
+			 * Perform any additional configuration of the provider before returning.
+			 */
+			if ( config.configureProvider ) {
+				await config.configureProvider(
+					provider,
+					objectType,
+					objectId
+				);
+			}
 		} catch {}
 
 		return {
