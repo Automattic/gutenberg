@@ -9,6 +9,7 @@ import { createSelector, createRegistrySelector } from '@wordpress/data';
 import { getDefaultTemplateId, getEntityRecord, type State } from './selectors';
 import { STORE_NAME } from './name';
 import { unlock } from './lock-unlock';
+import { getSyncProvider } from './sync';
 
 type EntityRecordKey = string | number;
 
@@ -21,7 +22,7 @@ type EntityRecordKey = string | number;
  * @return The undo manager.
  */
 export function getUndoManager( state: State ) {
-	return state.undoManager;
+	return getSyncProvider().getUndoManager() ?? state.undoManager;
 }
 
 /**
