@@ -6,6 +6,7 @@ import * as Y from 'yjs';
 /**
  * Internal dependencies
  */
+import { UndoManager } from './undo-manager';
 import type {
 	ConnectDoc,
 	ConnectDocResult,
@@ -25,6 +26,20 @@ interface EntityState {
 export class SyncProvider {
 	private connectLocal: ConnectDoc | null;
 	private connectRemote: ConnectDoc | null;
+
+	/**
+	 * CAUTION: We currently store a single UndoManager instance under these
+	 * assumptions:
+	 *
+	 * 1. Only entities loaded by the block editor support an undo manager.
+	 * 2. Only one such entity is loaded at a time.
+	 * 3. The entity's SyncConfig has `supportsUndo` set to true.
+	 *
+	 * If these assumptions fail, we will need to refactor the selectors provided
+	 * by `@wordpress/core-data` (e.g., `getUndoManager`) to support multiple
+	 * UndoManager instances by requiring the entity type and ID as parameters.
+	 */
+	private undoManager: UndoManager | null = null;
 
 	protected configs: Map< ObjectType, SyncConfig > = new Map();
 	protected connections: Map< EntityID, ConnectDocResult[] > = new Map();
@@ -98,11 +113,15 @@ export class SyncProvider {
 
 		ydoc.on( 'update', onUpdate );
 
+		if ( syncConfig.supportsUndo ) {
+			this.undoManager = new UndoManager( ydoc );
+		}
+
 		this.configs.set( objectType, syncConfig );
 		this.connections.set( entityId, connections );
 		this.entityStates.set( entityId, {
-			ydoc,
 			destroy: onDestroy,
+			ydoc,
 		} );
 
 		this.update( objectType, initialData, initialData, 'gutenberg' );
@@ -135,6 +154,15 @@ export class SyncProvider {
 			this.entityStates.get( this.getEntityId( objectType, objectId ) ) ??
 			null
 		);
+	}
+
+	/**
+	 * Get the undo manager.
+	 *
+	 * @return {UndoManager | null} The undo manager, or null if unsupported.
+	 */
+	public getUndoManager(): UndoManager | null {
+		return this.undoManager;
 	}
 
 	/**

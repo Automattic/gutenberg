@@ -30,4 +30,5 @@ export type SyncConfig = {
 	getObjectId: ( data: ObjectData ) => ObjectID;
 	objectType: ObjectType;
 	supportsAwareness?: boolean;
+	supportsUndo?: boolean;
 };

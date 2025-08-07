@@ -716,6 +716,7 @@ async function loadPostTypeEntities() {
 				getObjectId: ( { id } ) => id,
 				objectType: 'postType/' + postType.name,
 				supportsAwareness: true,
+				supportsUndo: true,
 			},
 			supportsPagination: true,
 			getRevisionsUrl: ( parentId, revisionId ) =>
