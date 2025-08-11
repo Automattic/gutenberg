@@ -166,6 +166,7 @@ export const rootEntitiesConfig = [
 			fromCRDTDoc: defaultYdocTransformer,
 			getObjectId: () => 'index',
 			objectType: 'root/base',
+			supportsUndo: true,
 		},
 	},
 	{
@@ -213,6 +214,7 @@ export const rootEntitiesConfig = [
 			fromCRDTDoc: defaultYdocTransformer,
 			getObjectId: ( { id } ) => id,
 			objectType: 'root/postType',
+			supportsUndo: true,
 		},
 	},
 	{
@@ -800,6 +802,7 @@ async function loadSiteEntity() {
 			fromCRDTDoc: defaultYdocTransformer,
 			getObjectId: () => 'index',
 			objectType: 'root/site',
+			supportsUndo: true,
 		},
 		meta: {},
 	};

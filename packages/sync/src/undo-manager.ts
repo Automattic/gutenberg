@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import * as Y from 'yjs';
+import { YMultiDocUndoManager } from 'y-utility/y-multidoc-undomanager';
 
 /**
  * WordPress dependencies
@@ -21,19 +21,19 @@ import type { CRDTDoc, ObjectData } from './types';
  * This allows seamless integration between Yjs collaborative editing and WordPress undo/redo functionality.
  */
 export class UndoManager implements WPUndoManager< ObjectData > {
-	private undoManager: Y.UndoManager;
+	private undoManager: YMultiDocUndoManager;
 
-	public constructor( ydoc: CRDTDoc ) {
-		this.undoManager = new Y.UndoManager( ydoc.getMap( 'document' ), {
-			// Ensure we undo and redo one character at a time.
+	public constructor() {
+		this.undoManager = new YMultiDocUndoManager( [], {
+			trackedOrigins: new Set( [ 'gutenberg' ] ),
 			captureTimeout: 0,
-			// Ensure that we only scope the undo/redo to the current client, and Gutenberg origins.
-			// ToDo: Keep an eye on this, as it needs to be battle tested.
-			trackedOrigins: new Set( [ 'gutenberg', ydoc.clientID ] ),
-			// This ensures that are able to improve the client specific undo/redo experience.
-			// This reduces the bugs we see, but it doesn't eliminate them entirely.
 			ignoreRemoteMapChanges: true,
 		} );
+	}
+
+	public addDocToTrack( ydoc: CRDTDoc ): void {
+		this.undoManager.addToScope( ydoc );
+		this.undoManager.addTrackedOrigin( ydoc.clientID );
 	}
 
 	/**

@@ -39,7 +39,7 @@ export class SyncProvider {
 	 * by `@wordpress/core-data` (e.g., `getUndoManager`) to support multiple
 	 * UndoManager instances by requiring the entity type and ID as parameters.
 	 */
-	private undoManager: UndoManager | null = null;
+	private undoManager: UndoManager = new UndoManager();
 
 	protected configs: Map< ObjectType, SyncConfig > = new Map();
 	protected connections: Map< EntityID, ConnectDocResult[] > = new Map();
@@ -114,7 +114,7 @@ export class SyncProvider {
 		ydoc.on( 'update', onUpdate );
 
 		if ( syncConfig.supportsUndo ) {
-			this.undoManager = new UndoManager( ydoc );
+			this.undoManager.addDocToTrack( ydoc );
 		}
 
 		this.configs.set( objectType, syncConfig );
