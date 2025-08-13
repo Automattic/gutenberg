@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 6.28.0 (2025-08-07)
+
 ### Deprecations
 
 -   Deprecated the `"data-wp-ignore"` directive of the Interactivity API.([#70945](https://github.com/WordPress/gutenberg/pull/70945))  

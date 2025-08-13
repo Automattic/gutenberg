@@ -526,6 +526,7 @@ function getNormalStylePropertyValue( property, value ) {
 	if (
 		typeof value === 'number' &&
 		0 !== value &&
+		! hasPrefix( property, [ '--' ] ) &&
 		! CSS_PROPERTIES_SUPPORTS_UNITLESS.has( property )
 	) {
 		return value + 'px';

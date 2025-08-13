@@ -297,3 +297,11 @@
 		max-width: 80ch;
 	}
 }
+
+.dataviews-view-table__group-header-row {
+	.dataviews-view-table__group-header-cell {
+		font-weight: $font-weight-medium;
+		padding: $grid-unit-15 $grid-unit-60;
+		color: $gray-900;
+	}
+}

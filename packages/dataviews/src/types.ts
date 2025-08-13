@@ -309,6 +309,11 @@ export interface Filter {
 	 * The value to filter by.
 	 */
 	value: any;
+
+	/**
+	 * Whether the filter can be edited by the user.
+	 */
+	isLocked?: boolean;
 }
 
 export interface NormalizedFilter {
@@ -346,6 +351,11 @@ export interface NormalizedFilter {
 	 * Whether it is a primary filter.
 	 */
 	isPrimary: boolean;
+
+	/**
+	 * Whether the filter can be edited by the user.
+	 */
+	isLocked: boolean;
 }
 
 interface ViewBase {
@@ -472,6 +482,11 @@ export interface ViewTable extends ViewBase {
 		 * The density of the view.
 		 */
 		density?: Density;
+
+		/**
+		 * Whether the view allows column moving.
+		 */
+		enableMoving?: boolean;
 	};
 }
 

@@ -58,7 +58,6 @@
 
 	.dataviews-view-grid__media {
 		width: 100%;
-		min-height: 200px;
 		aspect-ratio: 1/1;
 		background-color: $white;
 		border-radius: $radius-medium;
@@ -105,6 +104,9 @@
 			.dataviews-view-grid__field-name {
 				width: 35%;
 				color: $gray-700;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
 			}
 
 			.dataviews-view-grid__field-value {
@@ -155,8 +157,8 @@
 }
 
 .dataviews-view-grid__group-header {
-	font-size: 16px;
-	font-weight: 600;
+	font-size: $font-size-large;
+	font-weight: $font-weight-medium;
 	color: $gray-900;
 	margin: 0 0 $grid-unit-10 0;
 	padding: 0 $grid-unit-60;

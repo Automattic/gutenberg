@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 10.28.0 (2025-08-07)
+
 -   Add new `dashboard` icon ([#70300](https://github.com/WordPress/gutenberg/pull/70300)).
 
 ## 10.27.0 (2025-07-23)

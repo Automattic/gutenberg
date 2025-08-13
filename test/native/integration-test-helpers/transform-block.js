@@ -37,7 +37,7 @@ export const transformBlock = async (
 	fireEvent.press( getByText( 'Transform block…' ) );
 	fireEvent.press( getByText( targetBlockName ) );
 
-	// For media blocks, we must wait for the media fetch via `getMedia`.
+	// For media blocks, we must wait for the media fetch via `getEntityRecord`.
 	if ( isMediaBlock ) {
 		await act( () => apiFetchPromise );
 	}

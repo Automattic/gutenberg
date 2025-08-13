@@ -451,7 +451,7 @@ export const getEmbedPreview =
  *
  * @param {string}        requestedAction Action to check. One of: 'create', 'read', 'update',
  *                                        'delete'.
- * @param {string|Object} resource        Entity resource to check. Accepts entity object `{ kind: 'root', name: 'media', id: 1 }`
+ * @param {string|Object} resource        Entity resource to check. Accepts entity object `{ kind: 'postType', name: 'attachment', id: 1 }`
  *                                        or REST base as a string - `media`.
  * @param {?string}       id              ID of the rest resource to check.
  */

@@ -74,7 +74,7 @@ const getAddNewPageCommand = () =>
 			return [
 				{
 					name: 'core/add-new-page',
-					label: __( 'Add new page' ),
+					label: __( 'Add Page' ),
 					icon: plus,
 					callback: addNewPage,
 				},
@@ -90,7 +90,7 @@ const getAddNewPageCommand = () =>
 export function useAdminNavigationCommands() {
 	useCommand( {
 		name: 'core/add-new-post',
-		label: __( 'Add new post' ),
+		label: __( 'Add Post' ),
 		icon: plus,
 		callback: () => {
 			document.location.assign( 'post-new.php' );

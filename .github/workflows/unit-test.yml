@@ -33,7 +33,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                node: ['20', '22']
+                node: ['20', '22', '24']
                 shard: ['1/4', '2/4', '3/4', '4/4']
 
         steps:
@@ -78,7 +78,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                node: ['20', '22']
+                node: ['20', '22', '24']
 
         steps:
             - name: Checkout repository
@@ -231,7 +231,7 @@ jobs:
                   custom-cache-suffix: $(/bin/date -u --date='last Mon' "+%F")
 
             - name: Download built JavaScript assets
-              uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+              uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
               with:
                   name: build-assets
 

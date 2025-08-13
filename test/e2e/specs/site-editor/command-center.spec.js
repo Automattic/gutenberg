@@ -28,7 +28,7 @@ test.describe( 'Site editor command palette', () => {
 			.focus();
 		await page.keyboard.press( 'Meta+k' );
 		await page.keyboard.type( 'new page' );
-		await page.getByRole( 'option', { name: 'Add new page' } ).click();
+		await page.getByRole( 'option', { name: 'Add Page' } ).click();
 		await expect( page ).toHaveURL(
 			/\/wp-admin\/site-editor.php\?p=%2Fpage%2F(\d+)&canvas=edit/
 		);

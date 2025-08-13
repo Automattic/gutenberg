@@ -37,7 +37,7 @@ import {
 } from './fixtures';
 import { LAYOUT_GRID, LAYOUT_LIST, LAYOUT_TABLE } from '../../../constants';
 import { filterSortAndPaginate } from '../../../filter-and-sort-data-view';
-import type { View } from '../../../types';
+import type { Field, View } from '../../../types';
 
 import './style.css';
 
@@ -144,19 +144,23 @@ export const CustomEmpty = () => {
 	);
 };
 
-export const FieldsNoSortableNoHidable = () => {
+export const NonInteractive = () => {
 	const [ view, setView ] = useState< View >( {
 		...DEFAULT_VIEW,
 		fields: [ 'title', 'description', 'categories' ],
+		layout: {
+			enableMoving: false,
+		},
 	} );
 	const { data: shownData, paginationInfo } = useMemo( () => {
 		return filterSortAndPaginate( data, view, fields );
 	}, [ view ] );
 
-	const _fields = fields.map( ( field ) => ( {
+	const _fields: Field< SpaceObject >[] = fields.map( ( field ) => ( {
 		...field,
 		enableSorting: false,
 		enableHiding: false,
+		filterBy: false,
 	} ) );
 
 	return (
@@ -166,6 +170,8 @@ export const FieldsNoSortableNoHidable = () => {
 			data={ shownData }
 			view={ view }
 			fields={ _fields }
+			perPageSizes={ [] }
+			search={ false }
 			onChangeView={ setView }
 			defaultLayouts={ {
 				table: {},
@@ -347,7 +353,7 @@ export const WithCard = () => {
 	);
 };
 
-export const GroupedGridLayout = () => {
+export const GroupByLayout = () => {
 	const [ view, setView ] = useState< View >( {
 		type: LAYOUT_GRID,
 		search: '',
