@@ -149,7 +149,10 @@ describe( 'DataForm component', () => {
 				<Dataform
 					onChange={ noop }
 					fields={ fields }
-					form={ { ...form, labelPosition: 'side' } }
+					form={ {
+						...form,
+						layout: { type: 'regular', labelPosition: 'side' },
+					} }
 					data={ data }
 				/>
 			);
@@ -191,7 +194,10 @@ describe( 'DataForm component', () => {
 	describe( 'in panel mode', () => {
 		const formPanelMode = {
 			...form,
-			type: 'panel' as const,
+			layout: {
+				type: 'panel',
+				labelPosition: 'side',
+			} as const,
 		};
 		it( 'should display fields', async () => {
 			render(
@@ -243,7 +249,10 @@ describe( 'DataForm component', () => {
 				<Dataform
 					onChange={ noop }
 					fields={ fields }
-					form={ { ...formPanelMode, labelPosition: 'side' } }
+					form={ {
+						...formPanelMode,
+						layout: { type: 'panel', labelPosition: 'side' },
+					} }
 					data={ data }
 				/>
 			);

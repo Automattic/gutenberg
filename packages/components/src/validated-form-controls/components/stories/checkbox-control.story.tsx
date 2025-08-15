@@ -15,7 +15,8 @@ import { ValidatedCheckboxControl } from '../checkbox-control';
 import { formDecorator } from './story-utils';
 
 const meta: Meta< typeof ValidatedCheckboxControl > = {
-	title: 'Components (Experimental)/Validated Form Controls/ValidatedCheckboxControl',
+	title: 'Components/Selection & Input/Validated Form Controls/ValidatedCheckboxControl',
+	id: 'components-validatedcheckboxcontrol',
 	component: ValidatedCheckboxControl,
 	tags: [ 'status-private' ],
 	decorators: formDecorator,

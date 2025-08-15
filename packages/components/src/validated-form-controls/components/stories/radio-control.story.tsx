@@ -15,7 +15,8 @@ import { ValidatedRadioControl } from '../radio-control';
 import { formDecorator } from './story-utils';
 
 const meta: Meta< typeof ValidatedRadioControl > = {
-	title: 'Components (Experimental)/Validated Form Controls/ValidatedRadioControl',
+	title: 'Components/Selection & Input/Validated Form Controls/ValidatedRadioControl',
+	id: 'components-validatedradiocontrol',
 	component: ValidatedRadioControl,
 	tags: [ 'status-private' ],
 	decorators: formDecorator,

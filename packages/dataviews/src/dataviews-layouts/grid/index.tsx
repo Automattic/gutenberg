@@ -65,6 +65,7 @@ interface GridItemProps< Item > {
 	config: {
 		sizes: string;
 	};
+	posinset?: number;
 }
 
 function GridItem< Item >( {
@@ -84,8 +85,14 @@ function GridItem< Item >( {
 	badgeFields,
 	hasBulkActions,
 	config,
+	posinset,
 }: GridItemProps< Item > ) {
-	const { showTitle = true, showMedia = true, showDescription = true } = view;
+	const {
+		showTitle = true,
+		showMedia = true,
+		showDescription = true,
+		infiniteScrollEnabled,
+	} = view;
 	const hasBulkAction = useHasAPossibleBulkAction( actions, item );
 	const id = getItemId( item );
 	const instanceId = useInstanceId( GridItem );
@@ -118,6 +125,7 @@ function GridItem< Item >( {
 			};
 		}
 	}
+	const { paginationInfo } = useContext( DataViewsContext );
 
 	return (
 		<VStack
@@ -140,6 +148,11 @@ function GridItem< Item >( {
 					);
 				}
 			} }
+			role={ infiniteScrollEnabled ? 'article' : undefined }
+			aria-setsize={
+				infiniteScrollEnabled ? paginationInfo.totalItems : undefined
+			}
+			aria-posinset={ posinset }
 		>
 			{ showMedia && renderedMediaField && (
 				<ItemClickWrapper
@@ -325,6 +338,8 @@ function ViewGrid< Item >( {
 		  }, new Map< string, typeof data >() )
 		: null;
 
+	const isInfiniteScroll = view.infiniteScrollEnabled && ! dataByGroup;
+
 	return (
 		<>
 			{
@@ -412,8 +427,9 @@ function ViewGrid< Item >( {
 						} }
 						aria-busy={ isLoading }
 						ref={ resizeObserverRef }
+						role={ isInfiniteScroll ? 'feed' : undefined }
 					>
-						{ data.map( ( item ) => {
+						{ data.map( ( item, index ) => {
 							return (
 								<GridItem
 									key={ getItemId( item ) }
@@ -435,6 +451,9 @@ function ViewGrid< Item >( {
 									config={ {
 										sizes: size,
 									} }
+									posinset={
+										isInfiniteScroll ? index + 1 : undefined
+									}
 								/>
 							);
 						} ) }
@@ -454,6 +473,11 @@ function ViewGrid< Item >( {
 					</div>
 				)
 			}
+			{ hasData && isLoading && (
+				<p className="dataviews-loading-more">
+					<Spinner />
+				</p>
+			) }
 		</>
 	);
 }

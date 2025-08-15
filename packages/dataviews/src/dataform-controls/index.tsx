@@ -21,12 +21,14 @@ import select from './select';
 import text from './text';
 import toggleGroup from './toggle-group';
 import boolean from './boolean';
+import array from './array';
 
 interface FormControls {
 	[ key: string ]: ComponentType< DataFormControlProps< any > >;
 }
 
 const FORM_CONTROLS: FormControls = {
+	array,
 	boolean,
 	checkbox,
 	datetime,
@@ -51,7 +53,7 @@ export function getControl< Item >(
 		return getControlByType( field.Edit );
 	}
 
-	if ( field.elements ) {
+	if ( field.elements && field.type !== 'array' ) {
 		return getControlByType( 'select' );
 	}
 

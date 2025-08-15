@@ -15,7 +15,8 @@ import { formDecorator } from './story-utils';
 import { ValidatedTextControl } from '../text-control';
 
 const meta: Meta< typeof ValidatedTextControl > = {
-	title: 'Components (Experimental)/Validated Form Controls/ValidatedTextControl',
+	title: 'Components/Selection & Input/Validated Form Controls/ValidatedTextControl',
+	id: 'components-validatedtextcontrol',
 	component: ValidatedTextControl,
 	tags: [ 'status-private' ],
 	decorators: formDecorator,

@@ -9,12 +9,12 @@ import type { ReactNode, ComponentProps, ReactElement } from 'react';
 import { __experimentalHStack as HStack } from '@wordpress/components';
 import {
 	useContext,
+	useEffect,
 	useMemo,
 	useRef,
 	useState,
-	useEffect,
 } from '@wordpress/element';
-import { useResizeObserver } from '@wordpress/compose';
+import { useResizeObserver, throttle } from '@wordpress/compose';
 
 /**
  * Internal dependencies
@@ -51,6 +51,7 @@ type DataViewsProps< Item > = {
 	paginationInfo: {
 		totalItems: number;
 		totalPages: number;
+		infiniteScrollHandler?: () => void;
 	};
 	defaultLayouts: SupportedLayouts;
 	selection?: string[];
@@ -143,6 +144,7 @@ function DataViews< Item >( {
 	perPageSizes = [ 10, 20, 50, 100 ],
 	empty,
 }: DataViewsProps< Item > ) {
+	const { infiniteScrollHandler } = paginationInfo;
 	const containerRef = useRef< HTMLDivElement | null >( null );
 	const [ containerWidth, setContainerWidth ] = useState( 0 );
 	const resizeObserverRef = useResizeObserver(
@@ -193,6 +195,33 @@ function DataViews< Item >( {
 		}
 	}, [ hasPrimaryOrLockedFilters, isShowingFilter ] );
 
+	// Attach scroll event listener for infinite scroll
+	useEffect( () => {
+		if ( ! view.infiniteScrollEnabled || ! containerRef.current ) {
+			return;
+		}
+
+		const handleScroll = throttle( ( event: unknown ) => {
+			const target = ( event as Event ).target as HTMLElement;
+			const scrollTop = target.scrollTop;
+			const scrollHeight = target.scrollHeight;
+			const clientHeight = target.clientHeight;
+
+			// Check if user has scrolled near the bottom
+			if ( scrollTop + clientHeight >= scrollHeight - 100 ) {
+				infiniteScrollHandler?.();
+			}
+		}, 100 ); // Throttle to 100ms
+
+		const container = containerRef.current;
+		container.addEventListener( 'scroll', handleScroll );
+
+		return () => {
+			container.removeEventListener( 'scroll', handleScroll );
+			handleScroll.cancel(); // Cancel any pending throttled calls
+		};
+	}, [ infiniteScrollHandler, view.infiniteScrollEnabled ] );
+
 	return (
 		<DataViewsContext.Provider
 			value={ {
@@ -221,6 +250,7 @@ function DataViews< Item >( {
 				setIsShowingFilter,
 				perPageSizes,
 				empty,
+				hasInfiniteScrollHandler: !! infiniteScrollHandler,
 			} }
 		>
 			<div className="dataviews-wrapper" ref={ containerRef }>

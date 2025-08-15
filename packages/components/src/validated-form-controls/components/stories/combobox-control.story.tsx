@@ -15,7 +15,8 @@ import { ValidatedComboboxControl } from '../combobox-control';
 import { formDecorator } from './story-utils';
 
 const meta: Meta< typeof ValidatedComboboxControl > = {
-	title: 'Components (Experimental)/Validated Form Controls/ValidatedComboboxControl',
+	title: 'Components/Selection & Input/Validated Form Controls/ValidatedComboboxControl',
+	id: 'components-validatedcomboboxcontrol',
 	component: ValidatedComboboxControl,
 	tags: [ 'status-private' ],
 	decorators: formDecorator,

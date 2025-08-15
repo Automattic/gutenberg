@@ -1,7 +1,6 @@
 == Changelog ==
 
-= 21.4.0-rc.1 =
-
+= 21.4.0 =
 
 ## Changelog
 
@@ -65,7 +64,8 @@
 
 
 ### Bug Fixes
-
+- Synced Pattern: Guard against redeclaration of `WP_Block_Cloner`. ([71174](https://github.com/WordPress/gutenberg/pull/71174))
+- `core-data`: Fix `PostStatusObject` export ([#71191](https://github.com/WordPress/gutenberg/pull/71191))
 - Add `@wordpress/env` as an optional peer dependency of `@wordpress/scripts`. ([70636](https://github.com/WordPress/gutenberg/pull/70636))
 - DataViews: Allow searching over array fieldtypes. ([70785](https://github.com/WordPress/gutenberg/pull/70785))
 - Fields: Add label to Password field. ([70865](https://github.com/WordPress/gutenberg/pull/70865))
@@ -230,6 +230,8 @@ The following PRs were merged by first-time contributors:
 The following contributors merged PRs in this release:
 
 @Adi-ty @alshakero @andrewserong @arthur791004 @asdofindia @BugReportOnWeb @chihsuan @coderGtm @desrosj @dhananjaykuber @dhruvikpatel18 @dsas @fellyph @heavyweight @himanshupathak95 @im3dabasia @Infinite-Null @jameskoster @jasmussen @jeryj @jsnajdr @KHarika01 @kushagra-goyal-14 @lalitkumawat1m @Mamaduka @megane9988 @mikejolley @mirka @oandregal @ockham @p-jackson @priethor @ramonjd @rcrdortiz @richtabor @ryanwelcher @Sahil1617 @shail-mehta @shimotmk @shrivastavanolo @Sukhendu2002 @t-hamano @talldan @tellthemachines @USERSATOSHI @vipul0425 @westonruter @yogeshbhutkar
+
+
 
 
 = 21.3.0 =

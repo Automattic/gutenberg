@@ -34,14 +34,14 @@ jobs:
             - name: Build Storybook
               run: npm run storybook:build
 
-            # - name: Install Playwright dependencies
-            #   run: npx playwright install --with-deps
+            - name: Install Playwright dependencies
+              run: npx --no playwright install --with-deps
 
-            # - name: Serve Storybook and run tests
-            #   run: |
-            #       npx concurrently -k -s first -n "SB,TEST" -c "magenta,blue" \
-            #       "npx http-server ./storybook/build --port 50240 --silent" \
-            #       "npx wait-on tcp:127.0.0.1:50240 && \
-            #       NODE_PATH=./node_modules \
-            #       npx --package=@storybook/test-runner -- \
-            #       test-storybook --url http://localhost:50240 --config-dir ./storybook"
+            - name: Serve Storybook and run tests
+              run: |
+                  npx concurrently -k -s first -n "SB,TEST" -c "magenta,blue" \
+                  "npx http-server ./storybook/build --port 50240 --silent" \
+                  "npx wait-on tcp:127.0.0.1:50240 && \
+                  NODE_PATH=./node_modules \
+                  npx --package=@storybook/test-runner@0.22.1 -- \
+                  test-storybook --url http://localhost:50240 --config-dir ./storybook"

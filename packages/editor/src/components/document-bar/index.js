@@ -161,7 +161,7 @@ export default function DocumentBar( props ) {
 					</MotionButton>
 				) }
 			</AnimatePresence>
-			{ ! isTemplate && isTemplatePreview && (
+			{ ! isTemplate && isTemplatePreview && ! hasBackButton && (
 				<BlockIcon
 					icon={ layout }
 					className="editor-document-bar__icon-layout"

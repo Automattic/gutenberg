@@ -47,6 +47,7 @@ import { SORTING_DIRECTIONS, sortIcons, sortLabels } from '../../constants';
 import { VIEW_LAYOUTS } from '../../dataviews-layouts';
 import type { NormalizedField, View } from '../../types';
 import DataViewsContext from '../dataviews-context';
+import InfiniteScrollToggle from './infinite-scroll-toggle';
 import { unlock } from '../../lock-unlock';
 
 const { Menu } = unlock( componentsPrivateApis );
@@ -102,12 +103,11 @@ export function ViewTypeMenu() {
 										if ( 'layout' in viewWithoutLayout ) {
 											delete viewWithoutLayout.layout;
 										}
-										// @ts-expect-error
 										return onChangeView( {
 											...viewWithoutLayout,
 											type: e.target.value,
 											...defaultLayouts[ e.target.value ],
-										} );
+										} as View );
 								}
 								warning( 'Invalid dataview' );
 							} }
@@ -215,7 +215,12 @@ function SortDirectionControl() {
 
 function ItemsPerPageControl() {
 	const { view, perPageSizes, onChangeView } = useContext( DataViewsContext );
-	if ( perPageSizes.length < 2 || perPageSizes.length > 6 ) {
+	const { infiniteScrollEnabled } = view;
+	if (
+		perPageSizes.length < 2 ||
+		perPageSizes.length > 6 ||
+		infiniteScrollEnabled
+	) {
 		return null;
 	}
 
@@ -801,6 +806,7 @@ export function DataviewsViewConfigDropdown() {
 							{ !! activeLayout?.viewConfigOptions && (
 								<activeLayout.viewConfigOptions />
 							) }
+							<InfiniteScrollToggle />
 							<ItemsPerPageControl />
 						</SettingsSection>
 						<SettingsSection title={ __( 'Properties' ) }>

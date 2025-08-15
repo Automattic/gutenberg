@@ -15,7 +15,8 @@ import { ValidatedSelectControl } from '../select-control';
 import { formDecorator } from './story-utils';
 
 const meta: Meta< typeof ValidatedSelectControl > = {
-	title: 'Components (Experimental)/Validated Form Controls/ValidatedSelectControl',
+	title: 'Components/Selection & Input/Validated Form Controls/ValidatedSelectControl',
+	id: 'components-validatedselectcontrol',
 	component: ValidatedSelectControl,
 	tags: [ 'status-private' ],
 	decorators: formDecorator,

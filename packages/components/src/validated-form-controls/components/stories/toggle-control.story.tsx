@@ -15,7 +15,8 @@ import { formDecorator } from './story-utils';
 import { ValidatedToggleControl } from '../toggle-control';
 
 const meta: Meta< typeof ValidatedToggleControl > = {
-	title: 'Components (Experimental)/Validated Form Controls/ValidatedToggleControl',
+	title: 'Components/Selection & Input/Validated Form Controls/ValidatedToggleControl',
+	id: 'components-validatedtogglecontrol',
 	component: ValidatedToggleControl,
 	tags: [ 'status-private' ],
 	decorators: formDecorator,
