@@ -147,6 +147,23 @@ function DataViewWrapper( {
 
 // jest.useFakeTimers();
 
+// Tests run against a DataView which is 500px wide.
+jest.mock( '@wordpress/compose', () => {
+	return {
+		...jest.requireActual( '@wordpress/compose' ),
+		useResizeObserver: jest.fn( ( callback ) => {
+			setTimeout( () => {
+				callback( [
+					{
+						borderBoxSize: [ { inlineSize: 500 } ],
+					},
+				] );
+			}, 0 );
+			return () => {};
+		} ),
+	};
+} );
+
 describe( 'DataViews component', () => {
 	it( 'should show "No results" if data is empty', () => {
 		render( <DataViewWrapper data={ [] } /> );
@@ -491,6 +508,27 @@ describe( 'DataViews component', () => {
 			).toBeChecked();
 
 			await user.keyboard( '{/Control}' );
+		} );
+
+		it( 'accepts an invalid previewSize and the preview size picker falls back to another size', async () => {
+			render(
+				<DataViewWrapper
+					view={ {
+						type: 'grid',
+						mediaField: 'image',
+						layout: { previewSize: 13 },
+					} }
+				/>
+			);
+			const user = userEvent.setup();
+			await user.click(
+				screen.getByRole( 'button', { name: 'View options' } )
+			);
+			const previewSizeSlider = screen.getByRole( 'slider', {
+				name: 'Preview size',
+			} );
+			expect( previewSizeSlider ).toBeInTheDocument();
+			expect( previewSizeSlider ).toHaveValue( '0' ); // Falls back to the smallest size, which is the first one.
 		} );
 	} );
 

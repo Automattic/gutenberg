@@ -416,9 +416,9 @@ The component receives the following props:
 
 React component to be rendered next to the view config button.
 
-#### `perPageSizes`: `number[]`
+#### `config`: false | { perPageSizes: number[] }
 
-A list of numbers used to control the available item counts per page. It's optional. Defaults to `[10, 20, 50, 100]`. The list needs to have a minimum of 2 items and a maximum of 6, otherwise the UI component won't be displayed.
+Optional. Set it to `false` to hide the view config control entirely. Pass an object with a list of `perPageSizes` to control the available item counts per page (defaults to `[10, 20, 50, 100]`). `perPageSizes` needs to have a minimum of 2 items and a maximum of 6, otherwise the UI component won't be displayed.
 
 #### `empty`: React node
 

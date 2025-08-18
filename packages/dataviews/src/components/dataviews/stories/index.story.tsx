@@ -89,7 +89,7 @@ export const Default = ( { perPageSizes = [ 10, 25, 50, 100 ] } ) => {
 			) }
 			isItemClickable={ () => true }
 			defaultLayouts={ defaultLayouts }
-			perPageSizes={ perPageSizes }
+			config={ { perPageSizes } }
 		/>
 	);
 };
@@ -172,7 +172,7 @@ export const MinimalUI = () => {
 			data={ shownData }
 			view={ view }
 			fields={ _fields }
-			perPageSizes={ [] }
+			config={ false }
 			search={ false }
 			onChangeView={ setView }
 			defaultLayouts={ {

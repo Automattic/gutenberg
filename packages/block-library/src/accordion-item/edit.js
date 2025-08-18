@@ -10,17 +10,28 @@ import {
 } from '@wordpress/block-editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect } from '@wordpress/element';
-import { PanelBody, ToggleControl } from '@wordpress/components';
+import {
+	ToggleControl,
+	__experimentalToolsPanel as ToolsPanel,
+	__experimentalToolsPanelItem as ToolsPanelItem,
+} from '@wordpress/components';
 /**
  * External dependencies
  */
 import clsx from 'clsx';
+
+/**
+ * Internal dependencies
+ */
+import { useToolsPanelDropdownMenuProps } from '../utils/hooks';
 
 export default function Edit( {
 	attributes: { openByDefault },
 	clientId,
 	setAttributes,
 } ) {
+	const dropdownMenuProps = useToolsPanelDropdownMenuProps();
+
 	const { isSelected, getBlockOrder } = useSelect(
 		( select ) => {
 			const {
@@ -83,26 +94,54 @@ export default function Edit( {
 	return (
 		<>
 			<InspectorControls key="setting">
-				<PanelBody title={ __( 'Settings' ) }>
-					<ToggleControl
-						label={ __( 'Open by default' ) }
-						__nextHasNoMarginBottom
-						onChange={ ( value ) => {
-							setAttributes( {
-								openByDefault: value,
+				<ToolsPanel
+					label={ __( 'Settings' ) }
+					resetAll={ () => {
+						setAttributes( { openByDefault: false } );
+						if ( contentBlockClientId ) {
+							updateBlockAttributes( contentBlockClientId, {
+								openByDefault: false,
 							} );
+						}
+					} }
+					dropdownMenuProps={ dropdownMenuProps }
+				>
+					<ToolsPanelItem
+						label={ __( 'Open by default' ) }
+						isShownByDefault
+						hasValue={ () => !! openByDefault }
+						onDeselect={ () => {
+							setAttributes( { openByDefault: false } );
 							if ( contentBlockClientId ) {
 								updateBlockAttributes( contentBlockClientId, {
-									openByDefault: value,
+									openByDefault: false,
 								} );
 							}
 						} }
-						checked={ openByDefault }
-						help={ __(
-							'Accordion content will be displayed by default.'
-						) }
-					/>
-				</PanelBody>
+					>
+						<ToggleControl
+							label={ __( 'Open by default' ) }
+							__nextHasNoMarginBottom
+							onChange={ ( value ) => {
+								setAttributes( {
+									openByDefault: value,
+								} );
+								if ( contentBlockClientId ) {
+									updateBlockAttributes(
+										contentBlockClientId,
+										{
+											openByDefault: value,
+										}
+									);
+								}
+							} }
+							checked={ openByDefault }
+							help={ __(
+								'Accordion content will be displayed by default.'
+							) }
+						/>
+					</ToolsPanelItem>
+				</ToolsPanel>
 			</InspectorControls>
 			<div { ...innerBlocksProps } />
 		</>

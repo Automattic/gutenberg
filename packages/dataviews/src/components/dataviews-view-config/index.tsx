@@ -214,11 +214,13 @@ function SortDirectionControl() {
 }
 
 function ItemsPerPageControl() {
-	const { view, perPageSizes, onChangeView } = useContext( DataViewsContext );
+	const { view, config, onChangeView } = useContext( DataViewsContext );
 	const { infiniteScrollEnabled } = view;
 	if (
-		perPageSizes.length < 2 ||
-		perPageSizes.length > 6 ||
+		! config ||
+		! config.perPageSizes ||
+		config.perPageSizes.length < 2 ||
+		config.perPageSizes.length > 6 ||
 		infiniteScrollEnabled
 	) {
 		return null;
@@ -245,7 +247,7 @@ function ItemsPerPageControl() {
 				} );
 			} }
 		>
-			{ perPageSizes.map( ( value ) => {
+			{ config.perPageSizes.map( ( value ) => {
 				return (
 					<ToggleGroupControlOption
 						key={ value }

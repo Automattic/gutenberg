@@ -48,11 +48,12 @@ export default function PreviewSizePicker() {
 
 	const layoutPreviewSize = view.layout?.previewSize ?? 230; // Default to the third smallest size if no preview size is set.
 	// If the container has resized and the set preview size is no longer available,
-	// we reset it to the next smallest size.
-	const previewSizeToUse = breakValues
-		.map( ( size, index ) => ( { ...size, index } ) )
-		.filter( ( size ) => size.value <= layoutPreviewSize )
-		.sort( ( a, b ) => b.value - a.value )[ 0 ].index;
+	// we reset it to the next smallest size, or the smallest available size.
+	const previewSizeToUse =
+		breakValues
+			.map( ( size, index ) => ( { ...size, index } ) )
+			.filter( ( size ) => size.value <= layoutPreviewSize )
+			.sort( ( a, b ) => b.value - a.value )[ 0 ]?.index ?? 0;
 
 	const marks = breakValues.map( ( size, index ) => {
 		return {

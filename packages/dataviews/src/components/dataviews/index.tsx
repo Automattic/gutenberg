@@ -66,7 +66,11 @@ type DataViewsProps< Item > = {
 	header?: ReactNode;
 	getItemLevel?: ( item: Item ) => number;
 	children?: ReactNode;
-	perPageSizes?: number[];
+	config?:
+		| false
+		| {
+				perPageSizes: number[];
+		  };
 	empty?: ReactNode;
 } & ( Item extends ItemWithId
 	? { getItemId?: ( item: Item ) => string }
@@ -86,7 +90,7 @@ function DefaultUI( {
 	search = true,
 	searchLabel = undefined,
 }: DefaultUIProps ) {
-	const { isShowingFilter } = useContext( DataViewsContext );
+	const { isShowingFilter, config } = useContext( DataViewsContext );
 	return (
 		<>
 			<HStack
@@ -103,14 +107,16 @@ function DefaultUI( {
 					{ search && <DataViewsSearch label={ searchLabel } /> }
 					<FiltersToggle />
 				</HStack>
-				<HStack
-					spacing={ 1 }
-					expanded={ false }
-					style={ { flexShrink: 0 } }
-				>
-					<DataViewsViewConfig />
-					{ header }
-				</HStack>
+				{ ( config || header ) && (
+					<HStack
+						spacing={ 1 }
+						expanded={ false }
+						style={ { flexShrink: 0 } }
+					>
+						config && <DataViewsViewConfig />
+						{ header }
+					</HStack>
+				) }
 			</HStack>
 			{ isShowingFilter && (
 				<DataViewsFilters className="dataviews-filters__container" />
@@ -141,7 +147,7 @@ function DataViews< Item >( {
 	isItemClickable = defaultIsItemClickable,
 	header,
 	children,
-	perPageSizes = [ 10, 20, 50, 100 ],
+	config = { perPageSizes: [ 10, 20, 50, 100 ] },
 	empty,
 }: DataViewsProps< Item > ) {
 	const { infiniteScrollHandler } = paginationInfo;
@@ -248,7 +254,7 @@ function DataViews< Item >( {
 				filters,
 				isShowingFilter,
 				setIsShowingFilter,
-				perPageSizes,
+				config,
 				empty,
 				hasInfiniteScrollHandler: !! infiniteScrollHandler,
 			} }

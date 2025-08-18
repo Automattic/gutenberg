@@ -8,11 +8,17 @@ import {
 } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import {
-	PanelBody,
 	ToggleControl,
 	__experimentalToggleGroupControl as ToggleGroupControl,
 	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
+	__experimentalToolsPanel as ToolsPanel,
+	__experimentalToolsPanelItem as ToolsPanelItem,
 } from '@wordpress/components';
+
+/**
+ * Internal dependencies
+ */
+import { useToolsPanelDropdownMenuProps } from '../utils/hooks';
 
 const ACCORDION_BLOCK_NAME = 'core/accordion-item';
 const ACCORDION_BLOCK = {
@@ -24,6 +30,7 @@ export default function Edit( {
 	setAttributes,
 } ) {
 	const blockProps = useBlockProps();
+	const dropdownMenuProps = useToolsPanelDropdownMenuProps();
 
 	const innerBlocksProps = useInnerBlocksProps( blockProps, {
 		template: [ [ ACCORDION_BLOCK_NAME ], [ ACCORDION_BLOCK_NAME ] ],
@@ -35,49 +42,90 @@ export default function Edit( {
 	return (
 		<>
 			<InspectorControls key="setting">
-				<PanelBody title={ __( 'Settings' ) } initialOpen>
-					<ToggleControl
-						isBlock
-						__nextHasNoMarginBottom
+				<ToolsPanel
+					label={ __( 'Settings' ) }
+					resetAll={ () => {
+						setAttributes( {
+							autoclose: false,
+							showIcon: true,
+							iconPosition: 'right',
+						} );
+					} }
+					dropdownMenuProps={ dropdownMenuProps }
+				>
+					<ToolsPanelItem
 						label={ __( 'Auto-close' ) }
-						onChange={ ( value ) => {
-							setAttributes( {
-								autoclose: value,
-							} );
-						} }
-						checked={ autoclose }
-						help={ __(
-							'Automatically close accordions when a new one is opened.'
-						) }
-					/>
-					<ToggleControl
-						isBlock
-						__nextHasNoMarginBottom
-						label={ __( 'Show icon' ) }
-						onChange={ ( value ) => {
-							setAttributes( {
-								showIcon: value,
-							} );
-						} }
-						checked={ showIcon }
-						help={ __(
-							'Display a plus icon next to the accordion header.'
-						) }
-					/>
-					<ToggleGroupControl
-						__nextHasNoMarginBottom
-						__next40pxDefaultSize
-						isBlock
-						label={ __( 'Icon Position' ) }
-						value={ iconPosition }
-						onChange={ ( value ) => {
-							setAttributes( { iconPosition: value } );
-						} }
+						isShownByDefault
+						hasValue={ () => !! autoclose }
+						onDeselect={ () =>
+							setAttributes( { autoclose: false } )
+						}
 					>
-						<ToggleGroupControlOption label="Left" value="left" />
-						<ToggleGroupControlOption label="Right" value="right" />
-					</ToggleGroupControl>
-				</PanelBody>
+						<ToggleControl
+							isBlock
+							__nextHasNoMarginBottom
+							label={ __( 'Auto-close' ) }
+							onChange={ ( value ) => {
+								setAttributes( {
+									autoclose: value,
+								} );
+							} }
+							checked={ autoclose }
+							help={ __(
+								'Automatically close accordions when a new one is opened.'
+							) }
+						/>
+					</ToolsPanelItem>
+					<ToolsPanelItem
+						label={ __( 'Show icon' ) }
+						isShownByDefault
+						hasValue={ () => ! showIcon }
+						onDeselect={ () => setAttributes( { showIcon: true } ) }
+					>
+						<ToggleControl
+							isBlock
+							__nextHasNoMarginBottom
+							label={ __( 'Show icon' ) }
+							onChange={ ( value ) => {
+								setAttributes( {
+									showIcon: value,
+								} );
+							} }
+							checked={ showIcon }
+							help={ __(
+								'Display a plus icon next to the accordion header.'
+							) }
+						/>
+					</ToolsPanelItem>
+					<ToolsPanelItem
+						label={ __( 'Icon Position' ) }
+						isShownByDefault
+						hasValue={ () => iconPosition !== 'right' }
+						onDeselect={ () =>
+							setAttributes( { iconPosition: 'right' } )
+						}
+					>
+						<ToggleGroupControl
+							__nextHasNoMarginBottom
+							__next40pxDefaultSize
+							isBlock
+							label={ __( 'Icon Position' ) }
+							value={ iconPosition }
+							onChange={ ( value ) => {
+								setAttributes( { iconPosition: value } );
+							} }
+						>
+							<ToggleGroupControlOption
+								label={ __( 'Left' ) }
+								value="left"
+							/>
+							<ToggleGroupControlOption
+								label={ __( 'Right' ) }
+								value="right"
+							/>
+						</ToggleGroupControl>
+					</ToolsPanelItem>
+				</ToolsPanel>
 			</InspectorControls>
 			<div { ...innerBlocksProps } />
 		</>

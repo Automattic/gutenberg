@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+-  Breaking change: deprecate `moreHorizontalMobile` icon. This was added in error, and `moreHorizontal` should be used instead. ([#71172](https://github.com/WordPress/gutenberg/pull/71172))
+
 ## 10.28.0 (2025-08-07)
 
 -   Add new `dashboard` icon ([#70300](https://github.com/WordPress/gutenberg/pull/70300)).
