@@ -289,8 +289,6 @@ function makeBlocksSerializable( blocks ) {
 async function loadPostTypeEntities() {
 	const syncedProperties = new Set( [
 		'blocks',
-		'content',
-		'excerpt',
 		'featured_media',
 		'format',
 		'generated_slug',
