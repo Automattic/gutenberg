@@ -337,8 +337,10 @@ async function loadPostTypeEntities() {
 				applyChangesToCRDTDoc: ( ydoc, allChanges ) => {
 					// local changes happened. Apply the differences to the ydoc
 					const ycontent = ydoc.getMap( 'document' );
-					const changes = Object.entries( allChanges ).filter(
-						( [ key ] ) => syncedProperties.has( key )
+					const changes = Object.fromEntries(
+						Object.entries( allChanges ).filter( ( [ key ] ) =>
+							syncedProperties.has( key )
+						)
 					);
 
 					Object.entries( changes ).forEach( ( [ key, value ] ) => {
