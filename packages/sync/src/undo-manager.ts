@@ -16,6 +16,35 @@ import type {
  */
 import type { CRDTDoc, ObjectData } from './types';
 
+interface StackItem {
+	meta: Map< string, unknown >;
+}
+
+interface StackItemEvent {
+	stackItem: StackItem;
+	origin: string;
+	type: 'undo' | 'redo';
+	changedParentTypes: Map<
+		Y.AbstractType< Y.YEvent< any > >,
+		Array< Y.YEvent< any > >
+	>;
+}
+
+export interface UndoManagerCallbacks {
+	onStackItemAdded?: (
+		event: StackItemEvent,
+		undoManager: Y.UndoManager
+	) => void;
+	onStackItemUpdated?: (
+		event: StackItemEvent,
+		undoManager: Y.UndoManager
+	) => void;
+	onStackItemPopped?: (
+		event: StackItemEvent,
+		undoManager: Y.UndoManager
+	) => void;
+}
+
 /**
  * Wrapper class that provides the WordPress UndoManager interface while using Y.UndoManager internally.
  * This allows seamless integration between Yjs collaborative editing and WordPress undo/redo functionality.
@@ -23,7 +52,7 @@ import type { CRDTDoc, ObjectData } from './types';
 export class UndoManager implements WPUndoManager< ObjectData > {
 	private undoManager: Y.UndoManager;
 
-	public constructor( ydoc: CRDTDoc ) {
+	public constructor( ydoc: CRDTDoc, callbacks: UndoManagerCallbacks ) {
 		this.undoManager = new Y.UndoManager( ydoc.getMap( 'document' ), {
 			// Ensure we undo and redo one character at a time.
 			captureTimeout: 0,
@@ -33,6 +62,24 @@ export class UndoManager implements WPUndoManager< ObjectData > {
 			// This ensures that are able to improve the client specific undo/redo experience.
 			// This reduces the bugs we see, but it doesn't eliminate them entirely.
 			ignoreRemoteMapChanges: true,
+		} );
+
+		this.undoManager.on( 'stack-item-added', ( event, undoManager ) => {
+			if ( callbacks.onStackItemAdded ) {
+				callbacks.onStackItemAdded( event, undoManager );
+			}
+		} );
+
+		this.undoManager.on( 'stack-item-updated', ( event, undoManager ) => {
+			if ( callbacks.onStackItemUpdated ) {
+				callbacks.onStackItemUpdated( event, undoManager );
+			}
+		} );
+
+		this.undoManager.on( 'stack-item-popped', ( event, undoManager ) => {
+			if ( callbacks.onStackItemPopped ) {
+				callbacks.onStackItemPopped( event, undoManager );
+			}
 		} );
 	}
 

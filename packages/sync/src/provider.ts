@@ -7,6 +7,7 @@ import * as Y from 'yjs';
  * Internal dependencies
  */
 import { UndoManager } from './undo-manager';
+import type { UndoManagerCallbacks } from './undo-manager';
 import type {
 	ConnectDoc,
 	ConnectDocResult,
@@ -114,7 +115,10 @@ export class SyncProvider {
 		ydoc.on( 'update', onUpdate );
 
 		if ( syncConfig.supportsUndo ) {
-			this.undoManager = new UndoManager( ydoc );
+			this.undoManager = new UndoManager(
+				ydoc,
+				this.getUndoManagerCallbacks()
+			);
 		}
 
 		this.configs.set( objectType, syncConfig );
@@ -203,6 +207,15 @@ export class SyncProvider {
 	 */
 	public getUndoManager(): UndoManager | null {
 		return this.undoManager;
+	}
+
+	/**
+	 * Get optional undo manager callbacks.
+	 *
+	 * @return {UndoManagerCallbacks} The undo manager callbacks.
+	 */
+	protected getUndoManagerCallbacks(): UndoManagerCallbacks {
+		return {};
 	}
 
 	/**
