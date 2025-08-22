@@ -25,8 +25,8 @@ export class UndoManager implements WPUndoManager< ObjectData > {
 
 	public constructor( ydoc: CRDTDoc ) {
 		this.undoManager = new Y.UndoManager( ydoc.getMap( 'document' ), {
-			// Ensure we undo and redo one character at a time.
-			captureTimeout: 0,
+			// Create undo stack after 1 second of no input.
+			captureTimeout: 1000,
 			// Ensure that we only scope the undo/redo to the current client, and Gutenberg origins.
 			// ToDo: Keep an eye on this, as it needs to be battle tested.
 			trackedOrigins: new Set( [ 'gutenberg', ydoc.clientID ] ),
