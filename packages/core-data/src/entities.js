@@ -9,12 +9,11 @@ import { capitalCase, pascalCase } from 'change-case';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import { parse } from '@wordpress/blocks';
-import { Y } from '@wordpress/sync';
 
 /**
  * Internal dependencies
  */
-import { mergeBlocks, mergePrimitiveValue } from './utils/crdt';
+import { defaultApplyChangesToCRDTDoc } from './utils/crdt';
 
 export const DEFAULT_ENTITY_KEY = 'id';
 const POST_RAW_ATTRIBUTES = [ 'title', 'excerpt', 'content' ];
@@ -268,7 +267,7 @@ async function loadPostTypeEntities() {
 	] );
 
 	const postTypes = await apiFetch( {
-		path: '/wp/v2/types?context=view',
+		path: '/wp/v2/types?context=edit',
 	} );
 	return Object.entries( postTypes ?? {} ).map( ( [ name, postType ] ) => {
 		const isTemplate = [ 'wp_template', 'wp_template_part' ].includes(
@@ -296,79 +295,29 @@ async function loadPostTypeEntities() {
 			__unstablePrePersist: isTemplate ? undefined : prePersistPostType,
 			__unstable_rest_base: postType.rest_base,
 			syncConfig: {
+				enabled: Boolean(
+					postType.supports?.[ 'collaborative-editing' ] &&
+						postType.supports?.editor
+				),
 				/**
 				 * @param {Y.Doc}  ydoc
-				 * @param {any}    changes
+				 * @param {Object} changes
 				 * @param {string} origin
 				 */
 				applyChangesToCRDTDoc: ( ydoc, changes, origin ) => {
-					// local changes happened. Apply the differences to the ydoc
-					const ycontent = ydoc.getMap( 'document' );
-
-					const filteredEntries = Object.entries( changes ).filter(
-						( [ key, value ] ) =>
-							syncedProperties.has( key ) &&
-							'function' !== typeof value // cannot serialize function values
+					const filteredChanges = Object.fromEntries(
+						Object.entries( changes ).filter(
+							( [ key, value ] ) =>
+								syncedProperties.has( key ) &&
+								'function' !== typeof value // cannot serialize function values
+						)
 					);
 
-					filteredEntries.forEach( ( [ key, newValue ] ) => {
-						const currentValue = ycontent.get( key );
-
-						// Return .get() result so that caller can operate on the data type
-						// without having to call .get() themselves.
-						function setValue( updatedValue ) {
-							ycontent.set( key, updatedValue );
-							return ycontent.get( key );
-						}
-
-						// Set primitive a value (strings, numbers, booleans).
-						function setPrimitiveValue( primitiveValue ) {
-							mergePrimitiveValue(
-								currentValue ?? undefined,
-								primitiveValue ?? undefined,
-								setValue,
-								origin
-							);
-						}
-
-						switch ( key ) {
-							case 'blocks': {
-								let currentBlocks = currentValue;
-								if ( ! ( currentBlocks instanceof Y.Array ) ) {
-									currentBlocks = setValue( new Y.Array() ); // Initialize
-								}
-
-								// Block[] from local changes or Y.Array< Y.Map > from peer.
-								const newBlocks = newValue ?? [];
-
-								// Merge blocks does not need `setValue` because it has been
-								// called above and the result can be operated on directly.
-								mergeBlocks( currentBlocks, newBlocks, origin );
-								break;
-							}
-
-							case 'title': {
-								// Copy logic from prePersistPostType to ensure that the "Auto
-								// Draft" template title is not synced.
-								let rawNewValue = newValue?.raw ?? newValue;
-								if (
-									! currentValue &&
-									'Auto Draft' === rawNewValue
-								) {
-									rawNewValue = '';
-								}
-
-								setPrimitiveValue( rawNewValue );
-								break;
-							}
-
-							// Add support for additional data types here.
-
-							default: {
-								setPrimitiveValue( newValue );
-							}
-						}
-					} );
+					defaultApplyChangesToCRDTDoc(
+						ydoc,
+						filteredChanges,
+						origin
+					);
 				},
 				fromCRDTDoc: defaultFromCRDTDoc,
 				/**
@@ -393,7 +342,7 @@ async function loadPostTypeEntities() {
 					);
 				},
 				getObjectId: ( { id } ) => id,
-				objectType: 'postType/' + postType.name,
+				objectType: `postType/${ postType.slug }`,
 				supportsAwareness: true,
 				supportsUndo: true,
 			},
