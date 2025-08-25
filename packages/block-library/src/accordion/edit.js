@@ -20,7 +20,7 @@ import {
  */
 import { useToolsPanelDropdownMenuProps } from '../utils/hooks';
 
-const ACCORDION_BLOCK_NAME = 'core/accordion-item';
+const ACCORDION_BLOCK_NAME = 'core/accordion-content';
 const ACCORDION_BLOCK = {
 	name: ACCORDION_BLOCK_NAME,
 };

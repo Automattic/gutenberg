@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 7.0.0 (2025-08-20)
+
 ### Breaking changes
 
 - DataForm: introduce a new `card` layout. The `form.type` has been moved under a new `layout` object and it is now `form.layout.type`, check the README for details. [#71100](https://github.com/WordPress/gutenberg/pull/71100)
@@ -12,14 +14,17 @@
 - Introduce a new `array` DataForm Edit control that supports multi-selection. [#71136](https://github.com/WordPress/gutenberg/pull/71136)
 - Add `enableMoving` option to the `table` layout to allow or disallow column moving left and right. [#71120](https://github.com/WordPress/gutenberg/pull/71120)
 - Add infinite scroll support across all layout types (grid, list, table). Enable infinite scroll by providing an `infiniteScrollHandler` function in the `paginationInfo` prop and toggling the feature in the view configuration. ([#70955](https://github.com/WordPress/gutenberg/pull/70955))
+- Add support for modal in DataForm panel layouts. [#71212](https://github.com/WordPress/gutenberg/pull/71212)
 
 ### Enhancements
 
+- Update DataForm stories to better highlight the library's capabilities ([#71268](https://github.com/WordPress/gutenberg/pull/71268)).
 - Add two smaller sizs to the grid layout ([#71077](https://github.com/WordPress/gutenberg/pull/71077)).
 
 ### Bug Fixes
 
 - Do not throw exception when `view.layout.previewSize` is smaller than the smallest available size. [#71218](https://github.com/WordPress/gutenberg/pull/71218)
+- Fix actions horizontal layout consistency when all actions are primary. [#71274](https://github.com/WordPress/gutenberg/pull/71274)
 
 ## 6.0.0 (2025-08-07)
 
