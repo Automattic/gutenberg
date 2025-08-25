@@ -407,6 +407,16 @@ getEntityRecords.shouldInvalidate = ( action, kind, name ) => {
 };
 
 /**
+ * Requests the total number of entity records.
+ */
+export const getEntityRecordsTotalItems = forwardResolver( 'getEntityRecords' );
+
+/**
+ * Requests the number of available pages for the given query.
+ */
+export const getEntityRecordsTotalPages = forwardResolver( 'getEntityRecords' );
+
+/**
  * Requests the current theme.
  */
 export const getCurrentTheme =

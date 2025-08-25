@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { useState } from '@wordpress/element';
+import { useRef, useCallback, useState } from '@wordpress/element';
 
 /**
  * External dependencies
@@ -14,6 +14,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ValidatedInputControl } from '..';
 import { formDecorator } from './story-utils';
 import type { ControlWithError } from '../../control-with-error';
+import { debounce } from '@wordpress/compose';
 
 const meta: Meta< typeof ControlWithError > = {
 	title: 'Components/Selection & Input/Validated Form Controls/Overview',
@@ -32,6 +33,18 @@ export const WithMultipleControls: Story = {
 	render: function Template() {
 		const [ text, setText ] = useState( '' );
 		const [ text2, setText2 ] = useState( '' );
+		const [ customValidity, setCustomValidity ] =
+			useState<
+				React.ComponentProps<
+					typeof ValidatedInputControl
+				>[ 'customValidity' ]
+			>( undefined );
+		const [ customValidity2, setCustomValidity2 ] =
+			useState<
+				React.ComponentProps<
+					typeof ValidatedInputControl
+				>[ 'customValidity' ]
+			>( undefined );
 
 		return (
 			<>
@@ -40,12 +53,17 @@ export const WithMultipleControls: Story = {
 					required
 					value={ text }
 					help="The word 'error' will trigger an error."
-					customValidator={ ( value ) => {
+					onValidate={ ( value ) => {
 						if ( value?.toLowerCase() === 'error' ) {
-							return 'The word "error" is not allowed.';
+							setCustomValidity( {
+								type: 'invalid',
+								message: 'The word "error" is not allowed.',
+							} );
+						} else {
+							setCustomValidity( undefined );
 						}
-						return undefined;
 					} }
+					customValidity={ customValidity }
 					onChange={ ( value ) => setText( value ?? '' ) }
 				/>
 				<ValidatedInputControl
@@ -53,13 +71,18 @@ export const WithMultipleControls: Story = {
 					required
 					value={ text2 }
 					help="The word 'error' will trigger an error."
-					customValidator={ ( value ) => {
+					onValidate={ ( value ) => {
 						if ( value?.toLowerCase() === 'error' ) {
-							return 'The word "error" is not allowed.';
+							setCustomValidity2( {
+								type: 'invalid',
+								message: 'The word "error" is not allowed.',
+							} );
+						} else {
+							setCustomValidity2( undefined );
 						}
-						return undefined;
 					} }
 					onChange={ ( value ) => setText2( value ?? '' ) }
+					customValidity={ customValidity2 }
 				/>
 			</>
 		);
@@ -73,7 +96,12 @@ export const WithMultipleControls: Story = {
 export const WithHelpTextReplacement: Story = {
 	render: function Template() {
 		const [ text, setText ] = useState( '' );
-		const [ hasCustomError, setHasCustomError ] = useState( false );
+		const [ customValidity, setCustomValidity ] =
+			useState<
+				React.ComponentProps<
+					typeof ValidatedInputControl
+				>[ 'customValidity' ]
+			>( undefined );
 
 		return (
 			<ValidatedInputControl
@@ -81,20 +109,100 @@ export const WithHelpTextReplacement: Story = {
 				required
 				value={ text }
 				help={
-					hasCustomError
+					customValidity
 						? undefined
 						: 'The word "error" is not allowed.'
 				}
-				customValidator={ ( value ) => {
+				onValidate={ ( value ) => {
 					if ( value?.toLowerCase() === 'error' ) {
-						setHasCustomError( true );
-						return 'The word "error" is not allowed.';
+						setCustomValidity( {
+							type: 'invalid',
+							message: 'The word "error" is not allowed.',
+						} );
+					} else {
+						setCustomValidity( undefined );
 					}
-					setHasCustomError( false );
-					return undefined;
 				} }
 				onChange={ ( value ) => setText( value ?? '' ) }
+				customValidity={ customValidity }
 			/>
 		);
 	},
+};
+
+/**
+ * To provide feedback from server-side validation, the `customValidity` prop can be used
+ * to show additional status indicators while waiting for the server response,
+ * and after the response is received.
+ *
+ * These indicators are intended for asynchronous validation calls that may take more than 1 second to complete.
+ * They may be unnecessary when responses are generally quick.
+ */
+export const AsyncValidation: StoryObj< typeof ValidatedInputControl > = {
+	render: function Template( { ...args } ) {
+		const [ text, setText ] = useState( '' );
+		const [ customValidity, setCustomValidity ] =
+			useState<
+				React.ComponentProps<
+					typeof ValidatedInputControl
+				>[ 'customValidity' ]
+			>( undefined );
+
+		const timeoutRef = useRef< ReturnType< typeof setTimeout > >();
+		const previousValidationValueRef = useRef< unknown >( '' );
+
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		const debouncedValidate = useCallback(
+			debounce( ( v ) => {
+				if ( v === previousValidationValueRef.current ) {
+					return;
+				}
+
+				previousValidationValueRef.current = v;
+
+				setCustomValidity( {
+					type: 'validating',
+					message: 'Validating...',
+				} );
+
+				clearTimeout( timeoutRef.current );
+				timeoutRef.current = setTimeout(
+					() => {
+						if ( v?.toString().toLowerCase() === 'error' ) {
+							setCustomValidity( {
+								type: 'invalid',
+								message: 'The word "error" is not allowed.',
+							} );
+						} else {
+							setCustomValidity( {
+								type: 'valid',
+								message: 'Validated',
+							} );
+						}
+					},
+					// Mimics a random server response time.
+					// eslint-disable-next-line no-restricted-syntax
+					Math.random() < 0.5 ? 1500 : 300
+				);
+			}, 500 ),
+			[]
+		);
+
+		return (
+			<ValidatedInputControl
+				{ ...args }
+				value={ text }
+				onChange={ ( newValue ) => {
+					setText( newValue ?? '' );
+				} }
+				onValidate={ debouncedValidate }
+				customValidity={ customValidity }
+			/>
+		);
+	},
+};
+AsyncValidation.args = {
+	label: 'Text',
+	help: 'The word "error" will trigger an error asynchronously.',
+	required: true,
 };

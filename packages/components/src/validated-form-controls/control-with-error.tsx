@@ -2,7 +2,6 @@
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { error } from '@wordpress/icons';
 
 /**
  * External dependencies
@@ -18,8 +17,8 @@ import {
  * Internal dependencies
  */
 import { withIgnoreIMEEvents } from '../utils/with-ignore-ime-events';
-
-import Icon from '../icon';
+import type { ValidatedControlProps } from './components/types';
+import { ValidityIndicator } from './validity-indicator';
 
 function appendRequiredIndicator(
 	label: React.ReactNode,
@@ -61,7 +60,8 @@ function UnforwardedControlWithError< C extends React.ReactElement >(
 	{
 		required,
 		markWhenOptional,
-		customValidator,
+		onValidate,
+		customValidity,
 		getValidityTarget,
 		children,
 	}: {
@@ -74,12 +74,10 @@ function UnforwardedControlWithError< C extends React.ReactElement >(
 		 */
 		markWhenOptional?: boolean;
 		/**
-		 * A function that returns a custom validity message when applicable.
-		 *
-		 * This message will be applied to the element returned by `getValidityTarget`.
-		 * @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLObjectElement/setCustomValidity
+		 * The callback to run when the input should be validated.
 		 */
-		customValidator?: () => string | void;
+		onValidate?: () => void;
+		customValidity?: ValidatedControlProps< unknown >[ 'customValidity' ];
 		/**
 		 * A function that returns the actual element on which the validity data should be applied.
 		 */
@@ -92,6 +90,13 @@ function UnforwardedControlWithError< C extends React.ReactElement >(
 	forwardedRef: React.ForwardedRef< HTMLDivElement >
 ) {
 	const [ errorMessage, setErrorMessage ] = useState< string | undefined >();
+	const [ statusMessage, setStatusMessage ] = useState<
+		| {
+				type: 'validating' | 'valid';
+				message?: string;
+		  }
+		| undefined
+	>();
 	const [ isTouched, setIsTouched ] = useState( false );
 
 	// Ensure that error messages are visible after user attemps to submit a form
@@ -111,13 +116,58 @@ function UnforwardedControlWithError< C extends React.ReactElement >(
 		};
 	} );
 
-	const validate = () => {
-		const message = customValidator?.();
+	useEffect( () => {
+		if ( ! isTouched ) {
+			return;
+		}
+
 		const validityTarget = getValidityTarget();
 
-		validityTarget?.setCustomValidity( message ?? '' );
-		setErrorMessage( validityTarget?.validationMessage );
-	};
+		if ( ! customValidity?.type ) {
+			validityTarget?.setCustomValidity( '' );
+			setErrorMessage( validityTarget?.validationMessage );
+			setStatusMessage( undefined );
+			return;
+		}
+
+		switch ( customValidity.type ) {
+			case 'validating': {
+				// Wait before showing a validating state.
+				const timer = setTimeout( () => {
+					setStatusMessage( {
+						type: 'validating',
+						message: customValidity.message,
+					} );
+				}, 1000 );
+
+				return () => clearTimeout( timer );
+			}
+			case 'valid': {
+				validityTarget?.setCustomValidity( '' );
+				setErrorMessage( validityTarget?.validationMessage );
+
+				setStatusMessage( {
+					type: 'valid',
+					message: customValidity.message,
+				} );
+				return;
+			}
+			case 'invalid': {
+				validityTarget?.setCustomValidity(
+					customValidity.message ?? ''
+				);
+				setErrorMessage( validityTarget?.validationMessage );
+
+				setStatusMessage( undefined );
+				return undefined;
+			}
+		}
+	}, [
+		isTouched,
+		customValidity?.type,
+		customValidity?.message,
+		getValidityTarget,
+	] );
 
 	const onBlur = ( event: React.FocusEvent< HTMLDivElement > ) => {
 		// Only consider "blurred from the component" if focus has fully left the wrapping div.
@@ -138,7 +188,7 @@ function UnforwardedControlWithError< C extends React.ReactElement >(
 				return;
 			}
 
-			validate();
+			onValidate?.();
 		}
 	};
 
@@ -148,7 +198,7 @@ function UnforwardedControlWithError< C extends React.ReactElement >(
 		// Only validate incrementally if the field has blurred at least once,
 		// or currently has an error message.
 		if ( isTouched || errorMessage ) {
-			validate();
+			onValidate?.();
 		}
 	};
 
@@ -156,7 +206,7 @@ function UnforwardedControlWithError< C extends React.ReactElement >(
 		// Ensures that custom validators are triggered when the user submits by pressing Enter,
 		// without ever blurring the control.
 		if ( event.key === 'Enter' ) {
-			validate();
+			onValidate?.();
 		}
 	};
 
@@ -180,15 +230,16 @@ function UnforwardedControlWithError< C extends React.ReactElement >(
 			} ) }
 			<div aria-live="polite">
 				{ errorMessage && (
-					<p className="components-validated-control__error">
-						<Icon
-							className="components-validated-control__error-icon"
-							icon={ error }
-							size={ 16 }
-							fill="currentColor"
-						/>
-						{ errorMessage }
-					</p>
+					<ValidityIndicator
+						type="invalid"
+						message={ errorMessage }
+					/>
+				) }
+				{ ! errorMessage && statusMessage && (
+					<ValidityIndicator
+						type={ statusMessage.type }
+						message={ statusMessage.message }
+					/>
 				) }
 			</div>
 		</div>

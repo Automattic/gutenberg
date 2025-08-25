@@ -221,7 +221,7 @@ export function RouterProvider( {
 	);
 	const matcher = useMemo( () => {
 		const ret = new RouteRecognizer();
-		routes.forEach( ( route ) => {
+		( routes ?? [] ).forEach( ( route ) => {
 			ret.add( [ { path: route.path, handler: route } ], {
 				as: route.name,
 			} );
