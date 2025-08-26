@@ -264,6 +264,10 @@ async function loadPostTypeEntities() {
 		'tags',
 		'template',
 		'title',
+		'class_list',
+		'categories',
+		'status',
+		'content',
 	] );
 
 	const postTypes = await apiFetch( {
@@ -334,6 +338,14 @@ async function loadPostTypeEntities() {
 					// the synced properties set.
 					const content = record.content?.raw ?? record.content ?? '';
 					const blocks = parse( content );
+
+					if ( record.status && record.status === 'auto-draft' ) {
+						record.status = 'draft';
+						record.class_list.push( 'status-draft' );
+						record.class_list = record.class_list.filter(
+							( className ) => className !== 'status-auto-draft'
+						);
+					}
 
 					return Object.fromEntries(
 						Object.entries( { ...record, blocks } ).filter(
