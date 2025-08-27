@@ -264,9 +264,7 @@ async function loadPostTypeEntities() {
 		'tags',
 		'template',
 		'title',
-		'class_list',
-		'categories',
-		// 'status',
+		'status',
 		'content',
 	] );
 
@@ -339,13 +337,9 @@ async function loadPostTypeEntities() {
 					const content = record.content?.raw ?? record.content ?? '';
 					const blocks = parse( content );
 
-					// if ( record.status && record.status === 'auto-draft' ) {
-					// 	record.status = 'draft';
-					// 	record.class_list.push( 'status-draft' );
-					// 	record.class_list = record.class_list.filter(
-					// 		( className ) => className !== 'status-auto-draft'
-					// 	);
-					// }
+					if ( record.status && record.status === 'auto-draft' ) {
+						record.status = 'draft';
+					}
 
 					return Object.fromEntries(
 						Object.entries( { ...record, blocks } ).filter(

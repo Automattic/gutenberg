@@ -168,6 +168,30 @@ export const getEntityRecord =
 									undo: undefined,
 								},
 							} );
+
+							// Sync the save/publish state across clients, by triggering the entity to be saved once it's been edited.
+							// This should only be done when the blocks and content are actually present.
+							const areBlocksEmpty =
+								edits.blocks && edits.blocks.length === 0;
+							const isContentEmpty =
+								! edits.content ||
+								( edits.content.raw === '' &&
+									edits.content.rendered === '' );
+
+							if ( areBlocksEmpty && isContentEmpty ) {
+								// eslint-disable-next-line no-console
+								console.log(
+									'Do not sync the save/publish state'
+								);
+							} else {
+								// eslint-disable-next-line no-console
+								console.log( 'Sync the save/publish state' );
+								dispatch.saveEditedEntityRecord(
+									kind,
+									name,
+									key
+								);
+							}
 						}
 					);
 				}
