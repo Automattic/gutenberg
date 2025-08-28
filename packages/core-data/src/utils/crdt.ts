@@ -11,7 +11,7 @@ import { type CRDTDoc, Y } from '@wordpress/sync';
 /**
  * Internal dependencies
  */
-import { mergeBlocks, type Block, type YBlock } from './crdt-blocks';
+import { mergeCrdtBlocks, type Block, type YBlock } from './crdt-blocks';
 
 type PrimitiveValue = string | number | boolean | null | undefined;
 
@@ -37,9 +37,7 @@ export function defaultApplyChangesToCRDTDoc(
 
 		switch ( key ) {
 			case 'blocks': {
-				let currentBlocks = ymap.get(
-					'blocks'
-				) as PostChanges[ 'blocks' ];
+				let currentBlocks = ymap.get( 'blocks' ) as Y.Array< YBlock >;
 
 				if ( ! ( currentBlocks instanceof Y.Array ) ) {
 					currentBlocks = setValue< Y.Array< YBlock > >(
@@ -52,7 +50,7 @@ export function defaultApplyChangesToCRDTDoc(
 
 				// Merge blocks does not need `setValue` because it has been
 				// called above and the result can be operated on directly.
-				mergeBlocks( currentBlocks, newBlocks, origin );
+				mergeCrdtBlocks( currentBlocks, newBlocks, origin );
 				break;
 			}
 

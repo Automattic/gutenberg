@@ -11,8 +11,16 @@ import * as fun from 'lib0/function';
 import { RichTextData } from '@wordpress/rich-text';
 import { Y } from '@wordpress/sync';
 
+// @ts-expect-error - This is a TypeScript file, and @wordpress/blocks doesn't have a tsconfig.json?
+import { getBlockTypes } from '@wordpress/blocks';
+
 interface BlockAttributes {
 	[ key: string ]: unknown;
+}
+
+interface BlockType {
+	name: string;
+	attributes?: Record< string, { type?: string } >;
 }
 
 export interface Block {
@@ -24,11 +32,24 @@ export interface Block {
 	name: string;
 }
 
+export type YBlock = Y.Map<
+	/* name, clientId, and originalContent are strings. */
+	| string
+	/* validationIssues? is an array of strings. */
+	| string[]
+	/* attributes is a Y.Map< unknown >. */
+	| YBlockAttributes
+	/* innerBlocks is a Y.Array< YBlock >. */
+	| Y.Array< YBlock >
+>;
+
+export type YBlockAttributes = Y.Map< Y.Text | unknown >;
+
 // The Y.Map type is not easy to work with. The generic type it accepts represents
 // the possible values of the map, which are varied in our case. This type is
 // accurate, but will require aggressive type narrowing when the map values are
 // accessed -- or type casting with `as`.
-export type YBlock = Y.Map< Block[ keyof Block ] >;
+// export type YBlock = Y.Map< Block[ keyof Block ] >;
 
 const serializableBlocksCache = new WeakMap< WeakKey, Block[] >();
 
@@ -77,35 +98,110 @@ function areBlocksEqual( gblock: Block, yblock: YBlock ): boolean {
 	};
 	const res = fun.equalityDeep(
 		Object.assign( {}, gblock, overwrites ),
-		Object.assign( {}, yblock, overwrites )
+		Object.assign( {}, yblockAsJson, overwrites )
 	);
 	const inners = gblock.innerBlocks || [];
-	const yinners = yblockAsJson.innerBlocks || [];
+	const yinners = yblock.get( 'innerBlocks' ) as Y.Array< YBlock >;
 	return (
 		res &&
 		inners.length === yinners.length &&
 		inners.every( ( block: Block, i: number ) =>
-			areBlocksEqual( block, yinners[ i ] )
+			areBlocksEqual( block, yinners.get( i ) )
 		)
 	);
 }
 
-export function mergeBlocks(
-	yblocks: Y.Array< YBlock >,
-	newValue: Block[] | Y.Array< YBlock >,
+function createNewYAttributeMap(
+	blockName: string,
+	attributes: BlockAttributes
+): YBlockAttributes {
+	return new Y.Map(
+		Object.entries( attributes ).map(
+			( [ attributeName, attributeValue ] ) => {
+				return [
+					attributeName,
+					createNewYAttributeValue(
+						blockName,
+						attributeName,
+						attributeValue
+					),
+				];
+			}
+		)
+	);
+}
+
+function createNewYAttributeValue(
+	blockName: string,
+	attributeName: string,
+	attributeValue: unknown
+): Y.Text | unknown {
+	const isRichText = isRichTextAttribute( blockName, attributeName );
+
+	if ( isRichText && 'string' === typeof attributeValue ) {
+		return new Y.Text( attributeValue );
+	}
+
+	return attributeValue;
+}
+
+function createNewYBlock( block: Block ): YBlock {
+	return new Y.Map(
+		Object.entries( block ).map( ( [ key, value ] ) => {
+			switch ( key ) {
+				case 'attributes': {
+					return [ key, createNewYAttributeMap( block.name, value ) ];
+				}
+
+				case 'innerBlocks': {
+					const innerBlocks = new Y.Array();
+
+					// If not an array, set to empty Y.Array.
+					if ( ! Array.isArray( value ) ) {
+						return [ key, innerBlocks ];
+					}
+
+					innerBlocks.insert(
+						0,
+						value.map( ( innerBlock: Block ) =>
+							createNewYBlock( innerBlock )
+						)
+					);
+
+					return [ key, innerBlocks ];
+				}
+
+				default:
+					return [ key, value ];
+			}
+		} )
+	);
+}
+
+/**
+ * Merge incoming block data into the local Y.Doc.
+ * This function is called to sync local block changes to a shared Y.Doc.
+ *
+ * @param yblocks        The blocks in the local Y.Doc.
+ * @param incomingBlocks Gutenberg blocks being synced.
+ * @param _origin        The origin of the sync, either 'syncProvider.getInitialCRDTDoc' or 'gutenberg'.
+ */
+export function mergeCrdtBlocks(
+	yblocks: Y.Array< YBlock >, // yblocks represent the blocks in the local Y.Doc
+	incomingBlocks: Block[], // incomingBlocks represent JSON blocks being synced, either from a peer or from the local editor
 	_origin: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): void {
 	// Ensure we are working with serializable block data.
-	if ( ! serializableBlocksCache.has( newValue ) ) {
+	if ( ! serializableBlocksCache.has( incomingBlocks ) ) {
 		serializableBlocksCache.set(
-			newValue,
-			makeBlocksSerializable( newValue )
+			incomingBlocks,
+			makeBlocksSerializable( incomingBlocks )
 		);
 	}
-	const unfilteredBlocks = serializableBlocksCache.get( newValue ) ?? [];
+	const allBlocks = serializableBlocksCache.get( incomingBlocks ) ?? [];
 
 	// Ensure we skip blocks that we don't want to sync at the moment
-	const blocks = unfilteredBlocks.filter( ( block ) =>
+	const blocksToSync = allBlocks.filter( ( block ) =>
 		shouldBlockBeSynced( block )
 	);
 
@@ -119,8 +215,10 @@ export function mergeBlocks(
 	// E.g.:
 	//   - textual content (using rich-text formatting?) may always be stored under `block.text`
 	//   - local information that shouldn't be shared (e.g. clientId or isDragging) is stored under `block.private`
-
-	const numOfCommonEntries = math.min( blocks.length ?? 0, yblocks.length );
+	const numOfCommonEntries = math.min(
+		blocksToSync.length ?? 0,
+		yblocks.length
+	);
 
 	let left = 0;
 	let right = 0;
@@ -129,7 +227,7 @@ export function mergeBlocks(
 	for (
 		;
 		left < numOfCommonEntries &&
-		areBlocksEqual( blocks[ left ], yblocks.get( left ) );
+		areBlocksEqual( blocksToSync[ left ], yblocks.get( left ) );
 		left++
 	) {
 		/* nop */
@@ -140,7 +238,7 @@ export function mergeBlocks(
 		;
 		right < numOfCommonEntries - left &&
 		areBlocksEqual(
-			blocks[ blocks.length - right - 1 ],
+			blocksToSync[ blocksToSync.length - right - 1 ],
 			yblocks.get( yblocks.length - right - 1 )
 		);
 		right++
@@ -149,16 +247,82 @@ export function mergeBlocks(
 	}
 
 	const numOfUpdatesNeeded = numOfCommonEntries - left - right;
-	const numOfInsertionsNeeded = math.max( 0, blocks.length - yblocks.length );
-	const numOfDeletionsNeeded = math.max( 0, yblocks.length - blocks.length );
+	const numOfInsertionsNeeded = math.max(
+		0,
+		blocksToSync.length - yblocks.length
+	);
+	const numOfDeletionsNeeded = math.max(
+		0,
+		yblocks.length - blocksToSync.length
+	);
 
 	// updates
 	for ( let i = 0; i < numOfUpdatesNeeded; i++, left++ ) {
-		const block = blocks[ left ];
+		const block = blocksToSync[ left ];
 		const yblock = yblocks.get( left );
-		Object.entries( block ).forEach( ( [ k, v ] ) => {
-			if ( ! fun.equalityDeep( block[ k ], yblock.get( k ) ) ) {
-				yblock.set( k, v );
+		Object.entries( block ).forEach( ( [ key, value ] ) => {
+			switch ( key ) {
+				case 'attributes': {
+					const currentAttributes = yblock.get(
+						key
+					) as YBlockAttributes;
+
+					// If attributes are not set on the yblock, use the new values.
+					if ( ! currentAttributes ) {
+						yblock.set(
+							key,
+							createNewYAttributeMap( block.name, value )
+						);
+						break;
+					}
+
+					Object.entries( value ).forEach(
+						( [ attributeName, attributeValue ] ) => {
+							if (
+								fun.equalityDeep(
+									currentAttributes?.get( attributeName ),
+									attributeValue
+								)
+							) {
+								return;
+							}
+
+							currentAttributes.set(
+								attributeName,
+								createNewYAttributeValue(
+									block.name,
+									attributeName,
+									attributeValue
+								)
+							);
+						}
+					);
+
+					// Delete any attributes that are no longer present.
+					currentAttributes.forEach(
+						( _attrValue: unknown, attrName: string ) => {
+							if ( ! value.hasOwnProperty( attrName ) ) {
+								currentAttributes.delete( attrName );
+							}
+						}
+					);
+
+					break;
+				}
+
+				case 'innerBlocks': {
+					// Recursively merge innerBlocks
+					const yInnerBlocks = yblock.get( key ) as Y.Array< YBlock >;
+					mergeCrdtBlocks( yInnerBlocks, value ?? [], _origin );
+					break;
+				}
+
+				default:
+					if (
+						! fun.equalityDeep( block[ key ], yblock.get( key ) )
+					) {
+						yblock.set( key, value );
+					}
 			}
 		} );
 		yblock.forEach( ( _v, k ) => {
@@ -173,17 +337,15 @@ export function mergeBlocks(
 
 	// inserts
 	for ( let i = 0; i < numOfInsertionsNeeded; i++, left++ ) {
-		yblocks.insert( left, [
-			new Y.Map< Block[ keyof Block ] >(
-				Object.entries( blocks[ left ] )
-			),
-		] );
+		const newBlock = [ createNewYBlock( blocksToSync[ left ] ) ];
+
+		yblocks.insert( left, newBlock );
 	}
 
 	// remove duplicate clientids
 	const knownClientIds = new Set< string >();
 	for ( let j = 0; j < yblocks.length; j++ ) {
-		const yblock: Y.Map< Block[ keyof Block ] > = yblocks.get( j );
+		const yblock: YBlock = yblocks.get( j );
 
 		let clientId: string = yblock.get( 'clientId' ) as string;
 
@@ -219,4 +381,45 @@ function shouldBlockBeSynced( block: Block ): boolean {
 
 	// Allow all other blocks to be synced.
 	return true;
+}
+
+// Cache rich-text attributes for all block types.
+let cachedRichTextAttributes: Map< string, Map< string, true > >;
+
+/**
+ * Given a block name and attribute key, return true if the attribute is rich-text typed.
+ *
+ * @param blockName     The name of the block, e.g. 'core/paragraph'.
+ * @param attributeName The name of the attribute to check, e.g. 'content'.
+ * @return True if the attribute is rich-text typed, false otherwise.
+ */
+function isRichTextAttribute(
+	blockName: string,
+	attributeName: string
+): boolean {
+	if ( ! cachedRichTextAttributes ) {
+		// Parse the attributes for all blocks once.
+		cachedRichTextAttributes = new Map< string, Map< string, true > >();
+
+		for ( const blockType of getBlockTypes() as BlockType[] ) {
+			const richTextAttributeMap = new Map< string, true >();
+
+			for ( const [ name, definition ] of Object.entries(
+				blockType.attributes ?? {}
+			) ) {
+				if ( 'rich-text' === definition.type ) {
+					richTextAttributeMap.set( name, true );
+				}
+			}
+
+			cachedRichTextAttributes.set(
+				blockType.name,
+				richTextAttributeMap
+			);
+		}
+	}
+
+	return (
+		cachedRichTextAttributes.get( blockName )?.has( attributeName ) ?? false
+	);
 }
