@@ -16,6 +16,7 @@ import type {
 	ObjectData,
 	ObjectType,
 	SyncConfig,
+	PrimitiveValue
 } from './types';
 
 interface EntityState {
@@ -231,6 +232,33 @@ export class SyncProvider {
 		ydoc?.transact( () => {
 			syncConfig.applyChangesToCRDTDoc( ydoc, changes, origin );
 		}, origin );
+	}
+
+	public getProperty(
+		objectType: ObjectType,
+		record: ObjectData,
+		lookupKey: 'content' | 'status'
+	): PrimitiveValue {
+		const syncConfig = this.configs.get( objectType );
+		const objectId = syncConfig?.getObjectId( record );
+
+		if ( ! syncConfig || ! objectId ) {
+			return null;
+		}
+
+		const ydoc = this.getEntityState( objectType, objectId )?.ydoc;
+
+		if ( ! ydoc ) {
+			return null;
+		}
+
+		const ymap = ydoc.getMap( 'document' );
+
+		if ( ! ymap.has( lookupKey ) ) {
+			return null;
+		}
+
+		return ymap.get( lookupKey ) as PrimitiveValue;
 	}
 
 	/**

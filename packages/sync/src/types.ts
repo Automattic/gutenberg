@@ -13,6 +13,8 @@ export type UndoManager = Y.UndoManager;
 
 export type CRDTDoc = Y.Doc;
 
+export type PrimitiveValue = string | number | boolean | null | undefined;
+
 export type ConnectDocResult = {
 	awareness?: Awareness;
 	destroy: () => void;

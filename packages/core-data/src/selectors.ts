@@ -26,6 +26,8 @@ import {
 import type * as ET from './entity-types';
 import type { UndoManager } from '@wordpress/undo-manager';
 import logEntityDeprecation from './utils/log-entity-deprecation';
+import type { PrimitiveValue } from '@wordpress/sync';
+import { getSyncProvider } from './sync';
 
 // This is an incomplete, high-level approximation of the State type.
 // It makes the selectors slightly more safe, but is intended to evolve
@@ -834,6 +836,23 @@ export const getEntityRecordNonTransientEdits = createSelector(
 		state.entities.records?.[ kind ]?.[ name ]?.edits?.[ recordId ],
 	]
 );
+
+export function getPropertyFromCRDTDoc(
+	state: State,
+	kind: string,
+	name: string,
+	recordId: EntityRecordKey,
+	lookupKey: 'content' | 'status'
+): PrimitiveValue {
+	logEntityDeprecation( kind, name, 'getPropertyFromCRDTDoc' );
+	const { syncConfig } = getEntityConfig( state, kind, name ) || {};
+
+	if ( ! syncConfig || ! syncConfig.objectType ) {
+		return null;
+	}
+
+	return getSyncProvider().getProperty( syncConfig.objectType, { id: recordId }, lookupKey );
+}
 
 /**
  * Returns true if the specified entity record has edits,

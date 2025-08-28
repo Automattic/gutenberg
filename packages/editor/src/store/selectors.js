@@ -162,6 +162,19 @@ export const getCurrentPost = createRegistrySelector(
 			postType,
 			postId
 		);
+
+		// If the post status has changed in a CRDT doc, update the post status here.
+		// This'll ensure that the publish panel shows the correct status.
+		if ( post && post.id ) {
+			const status = select( coreStore ).getPropertyFromCRDTDoc( 'postType', postType, post.id, 'status' );
+
+			if ( post.status !== 'auto-draft' && status && status !== post.status ) {
+				// eslint-disable-next-line no-console
+				console.log( 'Updating post status from CRDT doc' );
+				post.status = status;
+			}
+		}
+
 		if ( post ) {
 			return post;
 		}

@@ -6,14 +6,12 @@ import * as fun from 'lib0/function';
 /**
  * WordPress dependencies
  */
-import { type CRDTDoc, Y } from '@wordpress/sync';
+import { type CRDTDoc, type PrimitiveValue, Y } from '@wordpress/sync';
 
 /**
  * Internal dependencies
  */
 import { mergeBlocks, type Block, type YBlock } from './crdt-blocks';
-
-type PrimitiveValue = string | number | boolean | null | undefined;
 
 interface PostChanges {
 	blocks?: Y.Array< YBlock > | Block[];
