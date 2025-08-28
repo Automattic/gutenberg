@@ -265,7 +265,6 @@ async function loadPostTypeEntities() {
 		'template',
 		'title',
 		'status',
-		'content',
 	] );
 
 	const postTypes = await apiFetch( {

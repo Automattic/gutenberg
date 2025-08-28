@@ -237,7 +237,7 @@ export class SyncProvider {
 	public getProperty(
 		objectType: ObjectType,
 		record: ObjectData,
-		lookupKey: 'content' | 'status'
+		lookupKey: 'status'
 	): PrimitiveValue {
 		const syncConfig = this.configs.get( objectType );
 		const objectId = syncConfig?.getObjectId( record );

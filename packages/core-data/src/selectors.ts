@@ -842,7 +842,7 @@ export function getPropertyFromCRDTDoc(
 	kind: string,
 	name: string,
 	recordId: EntityRecordKey,
-	lookupKey: 'content' | 'status'
+	lookupKey: 'status'
 ): PrimitiveValue {
 	logEntityDeprecation( kind, name, 'getPropertyFromCRDTDoc' );
 	const { syncConfig } = getEntityConfig( state, kind, name ) || {};
