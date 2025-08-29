@@ -13,7 +13,7 @@ import { type CRDTDoc, Y } from '@wordpress/sync';
  */
 import { mergeBlocks, type Block, type YBlock } from './crdt-blocks';
 
-export type PrimitiveValue = string | number | boolean | null | undefined;
+type PrimitiveValue = string | number | boolean | null | undefined;
 
 interface PostChanges {
 	blocks?: Y.Array< YBlock > | Block[];
