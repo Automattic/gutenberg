@@ -837,7 +837,7 @@ export const getEntityRecordNonTransientEdits = createSelector(
 );
 
 /**
- * Returns an entity property from the sync procider.
+ * Returns an entity property from the sync provider.
  *
  * This is only restricted to status for now, and is applicable only to entities
  * that support syncing.
