@@ -336,10 +336,6 @@ async function loadPostTypeEntities() {
 					const content = record.content?.raw ?? record.content ?? '';
 					const blocks = parse( content );
 
-					if ( record.status && record.status === 'auto-draft' ) {
-						record.status = 'draft';
-					}
-
 					return Object.fromEntries(
 						Object.entries( { ...record, blocks } ).filter(
 							( [ key ] ) => syncedProperties.has( key )

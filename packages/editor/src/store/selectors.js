@@ -168,9 +168,9 @@ export const getCurrentPost = createRegistrySelector(
 		if ( post && post.id ) {
 			const status = select( coreStore ).getPropertyFromCRDTDoc( 'postType', postType, post.id, 'status' );
 
-			if ( post.status !== 'auto-draft' && status && status !== post.status ) {
+			if ( status && status !== 'auto-draft' && status !== post.status ) {
 				// eslint-disable-next-line no-console
-				console.log( 'Updating post status from CRDT doc' );
+				console.log( 'Updating post status from %s to %s', post.status, status );
 				post.status = status;
 			}
 		}
@@ -367,7 +367,8 @@ export function getEditedPostAttribute( state, attributeName ) {
 	// Fall back to saved post value if not edited.
 	const edits = getPostEdits( state );
 	if ( ! edits.hasOwnProperty( attributeName ) ) {
-		return getCurrentPostAttribute( state, attributeName );
+		const editedValue = getCurrentPostAttribute( state, attributeName );
+		return editedValue;
 	}
 
 	// Merge properties are objects which contain only the patch edit in state,

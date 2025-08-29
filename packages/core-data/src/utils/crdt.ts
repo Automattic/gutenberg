@@ -16,6 +16,7 @@ import { mergeBlocks, type Block, type YBlock } from './crdt-blocks';
 interface PostChanges {
 	blocks?: Y.Array< YBlock > | Block[];
 	title?: string | { raw: string };
+	status?: string
 }
 
 export function defaultApplyChangesToCRDTDoc(
@@ -67,6 +68,19 @@ export function defaultApplyChangesToCRDTDoc(
 				}
 
 				mergePrimitiveValue( currentValue, rawNewValue, setValue );
+				break;
+			}
+
+			case 'status': {
+				const currentValue = ymap.get(
+					'status'
+				) as PostChanges[ 'status' ];
+
+				if ( newValue === 'auto-draft' ) {
+					newValue = 'draft';
+				}
+
+				mergePrimitiveValue( currentValue, newValue, setValue );
 				break;
 			}
 
