@@ -163,14 +163,13 @@ export const getCurrentPost = createRegistrySelector(
 			postId
 		);
 
-		// If the post status has changed in a CRDT doc, update the post status here.
+		// If the post status has changed according to the sync provider, update the post status here.
 		// This'll ensure that the publish panel shows the correct status.
+		// auto-draft posts are excluded here as that's the default status for new posts.
 		if ( post && post.id ) {
-			const status = select( coreStore ).getPropertyFromCRDTDoc( 'postType', postType, post.id, 'status' );
+			const status = select( coreStore ).getEntityPropertyFromSyncProvider( 'postType', postType, post.id, 'status' );
 
 			if ( status && status !== 'auto-draft' && status !== post.status ) {
-				// eslint-disable-next-line no-console
-				console.log( 'Updating post status from %s to %s', post.status, status );
 				post.status = status;
 			}
 		}
@@ -367,8 +366,7 @@ export function getEditedPostAttribute( state, attributeName ) {
 	// Fall back to saved post value if not edited.
 	const edits = getPostEdits( state );
 	if ( ! edits.hasOwnProperty( attributeName ) ) {
-		const editedValue = getCurrentPostAttribute( state, attributeName );
-		return editedValue;
+		return getCurrentPostAttribute( state, attributeName );
 	}
 
 	// Merge properties are objects which contain only the patch edit in state,

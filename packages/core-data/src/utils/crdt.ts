@@ -6,12 +6,14 @@ import * as fun from 'lib0/function';
 /**
  * WordPress dependencies
  */
-import { type CRDTDoc, type PrimitiveValue, Y } from '@wordpress/sync';
+import { type CRDTDoc, Y } from '@wordpress/sync';
 
 /**
  * Internal dependencies
  */
 import { mergeBlocks, type Block, type YBlock } from './crdt-blocks';
+
+export type PrimitiveValue = string | number | boolean | null | undefined;
 
 interface PostChanges {
 	blocks?: Y.Array< YBlock > | Block[];
@@ -76,6 +78,8 @@ export function defaultApplyChangesToCRDTDoc(
 					'status'
 				) as PostChanges[ 'status' ];
 
+				// Copy logic from prePersistPostType to ensure that "auto-draft"
+				// status is not synced.
 				if ( newValue === 'auto-draft' ) {
 					newValue = 'draft';
 				}

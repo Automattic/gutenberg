@@ -16,7 +16,6 @@ import type {
 	ObjectData,
 	ObjectType,
 	SyncConfig,
-	PrimitiveValue
 } from './types';
 
 interface EntityState {
@@ -234,11 +233,21 @@ export class SyncProvider {
 		}, origin );
 	}
 
+	/**
+	 * Fetch a property from the CRDT document.
+	 *
+	 * Currently only supports fetching the 'status' property.
+	 *
+	 * @param {ObjectType} objectType Object type to load.
+	 * @param {ObjectData} record     Record to load.
+	 * @param {string}     lookupKey  The property to look up.
+	 * @return {string | null} The property value, or null if not found.
+	 */
 	public getProperty(
 		objectType: ObjectType,
 		record: ObjectData,
 		lookupKey: 'status'
-	): PrimitiveValue {
+	): string | null {
 		const syncConfig = this.configs.get( objectType );
 		const objectId = syncConfig?.getObjectId( record );
 
@@ -258,7 +267,7 @@ export class SyncProvider {
 			return null;
 		}
 
-		return ymap.get( lookupKey ) as PrimitiveValue;
+		return ymap.get( lookupKey ) as string;
 	}
 
 	/**
