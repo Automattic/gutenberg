@@ -162,6 +162,18 @@ export const getCurrentPost = createRegistrySelector(
 			postType,
 			postId
 		);
+
+		// If the post status has changed according to the sync provider, update the post status here.
+		// This'll ensure that the publish panel shows the correct status.
+		// auto-draft posts are excluded here as that's the default status for new posts.
+		if ( post && post.id ) {
+			const status = select( coreStore ).getEntityPropertyFromSyncProvider( 'postType', postType, post.id, 'status' );
+
+			if ( status && status !== 'auto-draft' && status !== post.status ) {
+				post.status = status;
+			}
+		}
+
 		if ( post ) {
 			return post;
 		}

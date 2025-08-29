@@ -26,6 +26,7 @@ import {
 import type * as ET from './entity-types';
 import type { UndoManager } from '@wordpress/undo-manager';
 import logEntityDeprecation from './utils/log-entity-deprecation';
+import { getSyncProvider } from './sync';
 
 // This is an incomplete, high-level approximation of the State type.
 // It makes the selectors slightly more safe, but is intended to evolve
@@ -832,6 +833,42 @@ export const getEntityRecordNonTransientEdits = createSelector(
 	( state: State, kind: string, name: string, recordId: EntityRecordKey ) => [
 		state.entities.config,
 		state.entities.records?.[ kind ]?.[ name ]?.edits?.[ recordId ],
+	]
+);
+
+/**
+ * Returns an entity property from the sync procider.
+ *
+ * This is only restricted to status for now, and is applicable only to entities
+ * that support syncing.
+ *
+ * @param state     State tree.
+ * @param kind      Entity kind.
+ * @param name      Entity name.
+ * @param recordId  Record ID.
+ * @param lookupKey The property to look up from the CRDT document.
+ *
+ * @return The property value from the sync provider, or null if not found or not applicable.
+ */
+export const getEntityPropertyFromSyncProvider = createSelector(
+	(
+		state: State,
+		kind: string,
+		name: string,
+		recordId: EntityRecordKey,
+		lookupKey: 'status'
+	): string | null => {
+		const { syncConfig } = getEntityConfig( state, kind, name ) || {};
+
+		if ( ! syncConfig || ! syncConfig.objectType ) {
+			return null;
+		}
+
+		return getSyncProvider().getProperty( syncConfig.objectType, { id: recordId }, lookupKey );
+	},
+	( state: State, kind: string, name: string, recordId: EntityRecordKey ) => [
+		state.entities.config,
+		state.entities.records?.[ kind ]?.[ name ]?.edits?.[ recordId ]
 	]
 );
 

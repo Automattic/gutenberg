@@ -18,6 +18,7 @@ type PrimitiveValue = string | number | boolean | null | undefined;
 interface PostChanges {
 	blocks?: Y.Array< YBlock > | Block[];
 	title?: string | { raw: string };
+	status?: string;
 }
 
 export function defaultApplyChangesToCRDTDoc(
@@ -67,6 +68,21 @@ export function defaultApplyChangesToCRDTDoc(
 				}
 
 				mergePrimitiveValue( currentValue, rawNewValue, setValue );
+				break;
+			}
+
+			case 'status': {
+				const currentValue = ymap.get(
+					'status'
+				) as PostChanges[ 'status' ];
+
+				// Copy logic from prePersistPostType to ensure that "auto-draft"
+				// status is not synced.
+				if ( newValue === 'auto-draft' ) {
+					newValue = 'draft';
+				}
+
+				mergePrimitiveValue( currentValue, newValue, setValue );
 				break;
 			}
 

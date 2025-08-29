@@ -298,6 +298,43 @@ export class SyncProvider {
 	}
 
 	/**
+	 * Fetch a property from the ydoc.
+	 *
+	 * Currently only supports fetching the 'status' property.
+	 *
+	 * @param {ObjectType} objectType Object type to load.
+	 * @param {ObjectData} record     Record to load.
+	 * @param {string}     lookupKey  The property to look up.
+	 * @return {string | null} The property value, or null if not found.
+	 */
+	public getProperty(
+		objectType: ObjectType,
+		record: ObjectData,
+		lookupKey: 'status'
+	): string | null {
+		const syncConfig = this.configs.get( objectType );
+		const objectId = syncConfig?.getObjectId( record );
+
+		if ( ! syncConfig || ! objectId ) {
+			return null;
+		}
+
+		const ydoc = this.getEntityState( objectType, objectId )?.ydoc;
+
+		if ( ! ydoc ) {
+			return null;
+		}
+
+		const ymap = ydoc.getMap( 'document' );
+
+		if ( ! ymap.has( lookupKey ) ) {
+			return null;
+		}
+
+		return ymap.get( lookupKey ) as string;
+	}
+
+	/**
 	 * Stop updating a document and discard it.
 	 *
 	 * @param {ObjectType} objectType Object type to discard.
