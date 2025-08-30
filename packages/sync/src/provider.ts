@@ -87,14 +87,16 @@ export class SyncProvider {
 	/**
 	 * Fetch data from local database or remote source.
 	 *
-	 * @param {SyncConfig} syncConfig    Sync configuration for the object type.
-	 * @param {ObjectData} record        Record representing this object type.
-	 * @param {Function}   handleChanges Callback to call when data changes.
+	 * @param {SyncConfig} syncConfig            Sync configuration for the object type.
+	 * @param {ObjectData} record                Record representing this object type.
+	 * @param {Function}   handleChangesToRecord Callback to call when record should be updated.
+	 * @param {Function}   getCurrentRecord      Get current record.
 	 */
 	public async bootstrap(
 		syncConfig: SyncConfig,
 		record: ObjectData,
-		handleChanges: ( data: Partial< ObjectData > ) => void
+		handleChangesToRecord: ( data: Partial< ObjectData > ) => void,
+		getCurrentRecord: () => Promise< ObjectData >
 	): Promise< void > {
 		const meta = new Map< string, unknown >( [
 			[ 'version', CRDT_DOC_VERSION ],
@@ -112,14 +114,24 @@ export class SyncProvider {
 			this.entityStates.delete( entityId );
 		};
 
-		const onUpdate = ( _update: Uint8Array, origin: string ): void => {
-			if ( origin !== 'gutenberg' ) {
-				const data = syncConfig.fromCRDTDoc( ydoc );
-				handleChanges( data );
-			}
+		const onUpdate = async (): Promise< void > => {
+			// Determine which data has actually changed.
+			const changes = syncConfig.getChangesFromCRDTDoc(
+				ydoc,
+				await getCurrentRecord()
+			);
+
+			// This is a good spot to debug to see which changes are being synced. Note
+			// that `blocks` will always appear in the changes.
+
+			handleChangesToRecord( changes );
 		};
 
-		ydoc.on( 'update', onUpdate );
+		ydoc.on( 'update', ( _update: Uint8Array, origin: string ): void => {
+			if ( origin !== 'gutenberg' ) {
+				void onUpdate();
+			}
+		} );
 
 		if ( syncConfig.supportsUndo ) {
 			this.undoManager = new UndoManager( ydoc );

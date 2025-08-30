@@ -36,7 +36,7 @@ export type SyncConfig = {
 		data: Partial< ObjectData >,
 		origin: string
 	) => void;
-	fromCRDTDoc: ( ydoc: Y.Doc ) => ObjectData;
+	getChangesFromCRDTDoc: ( ydoc: Y.Doc, record: ObjectData ) => ObjectData;
 	getInitialObjectData: ( record: ObjectData ) => ObjectData;
 	getObjectId: ( data: ObjectData ) => ObjectID;
 	objectType: ObjectType;
