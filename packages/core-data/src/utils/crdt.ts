@@ -36,7 +36,7 @@ export function defaultApplyChangesToCRDTDoc(
 		}
 
 		// Cannot serialize function values, so cannot sync them.
-		if ( 'function' !== typeof newValue ) {
+		if ( 'function' === typeof newValue ) {
 			return;
 		}
 
