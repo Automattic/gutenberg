@@ -400,10 +400,8 @@ export const editEntityRecord =
 		};
 		if ( window.__experimentalEnableSync && entityConfig.syncConfig ) {
 			if ( globalThis.IS_GUTENBERG_PLUGIN ) {
-				// @todo this always updates the Yjs doc, which is undesirable, probably we can read the yjs
-				// content from the comment tag here
-				getSyncProvider().update(
-					entityConfig.syncConfig.objectType,
+				getSyncProvider().updateCRDTDoc(
+					entityConfig.syncConfig,
 					record,
 					edit.edits,
 					'gutenberg'
@@ -703,6 +701,15 @@ export const saveEntityRecord =
 						true,
 						edits
 					);
+					if (
+						window.__experimentalEnableSync &&
+						entityConfig.syncConfig?.enabled
+					) {
+						getSyncProvider().updateLastPersistedDate(
+							entityConfig.syncConfig,
+							persistedRecord
+						);
+					}
 				}
 			} catch ( _error ) {
 				hasError = true;

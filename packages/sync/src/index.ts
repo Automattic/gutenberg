@@ -10,9 +10,10 @@ import { createWebRTCConnection } from './create-webrtc-connection';
 import { SyncProvider } from './provider';
 
 export * as Y from 'yjs';
+export { CRDT_DOC_VERSION } from './config';
 export { connectIndexDb } from './connect-indexdb';
 export { createWebRTCConnection } from './create-webrtc-connection';
-export { CRDT_DOC_VERSION, SyncProvider } from './provider';
+export { SyncProvider } from './provider';
 export * from './types';
 
 declare global {
@@ -34,7 +35,7 @@ declare global {
  * @return {SyncProvider} The WebRTC sync provider.
  */
 export function getWebRTCSyncProvider(): SyncProvider {
-	return new SyncProvider(
+	return new SyncProvider( [
 		connectIndexDb,
 		createWebRTCConnection( {
 			password: window?.__experimentalCollaborativeEditingSecret,
@@ -42,6 +43,6 @@ export function getWebRTCSyncProvider(): SyncProvider {
 				//'ws://localhost:4444',
 				window?.wp?.ajax?.settings?.url,
 			],
-		} )
-	);
+		} ),
+	] );
 }

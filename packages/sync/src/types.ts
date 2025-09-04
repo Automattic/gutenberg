@@ -12,12 +12,8 @@ export type ObjectType = string;
 export type UndoManager = Y.UndoManager;
 
 // Object data represents any entity record, post, term, user, site, etc. There
-// are not many expectations that can hold on its shape, but defining some
-// optional properties cuts down on the type narrowing.
-export interface ObjectData extends Record< string, unknown > {
-	meta?: Record< string, unknown >;
-	status?: string;
-}
+// are not many expectations that can hold on its shape.
+export interface ObjectData extends Record< string, unknown > {}
 
 export interface ConnectDocResult {
 	awareness?: Awareness;
@@ -30,16 +26,25 @@ export type ConnectDoc = (
 	ydoc: Y.Doc
 ) => Promise< ConnectDocResult >;
 
-export type SyncConfig = {
+export interface RecordHandlers {
+	editRecord: ( data: Partial< ObjectData > ) => void;
+	getEditedRecord: () => Promise< ObjectData >;
+	refetchPersistedRecord: () => void;
+}
+
+export interface SyncConfig {
 	applyChangesToCRDTDoc: (
 		ydoc: Y.Doc,
-		data: Partial< ObjectData >,
+		changes: Partial< ObjectData >,
+		record: ObjectData,
 		origin: string
 	) => void;
-	fromCRDTDoc: ( ydoc: Y.Doc ) => ObjectData;
+	getChangesFromCRDTDoc: ( ydoc: Y.Doc, record: ObjectData ) => ObjectData;
 	getInitialObjectData: ( record: ObjectData ) => ObjectData;
 	getObjectId: ( data: ObjectData ) => ObjectID;
 	objectType: ObjectType;
-	supportsAwareness?: boolean;
-	supportsUndo?: boolean;
-};
+	supports?: {
+		awareness?: boolean;
+		undo?: boolean;
+	};
+}
