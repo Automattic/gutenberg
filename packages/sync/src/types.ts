@@ -1,27 +1,45 @@
+/**
+ * External dependencies
+ */
+import type * as Y from 'yjs';
+import type { Awareness } from 'y-protocols/awareness';
+
+export type * as Y from 'yjs';
+export type CRDTDoc = Y.Doc;
+export type EntityID = string;
 export type ObjectID = string;
 export type ObjectType = string;
-export type ObjectData = any;
-export type CRDTDoc = any;
+export type UndoManager = Y.UndoManager;
 
-export type ObjectConfig = {
-	fetch: ( id: ObjectID ) => Promise< ObjectData >;
-	applyChangesToDoc: ( doc: CRDTDoc, data: any ) => void;
-	fromCRDTDoc: ( doc: CRDTDoc ) => any;
-};
+// Object data represents any entity record, post, term, user, site, etc. There
+// are not many expectations that can hold on its shape, but defining some
+// optional properties cuts down on the type narrowing.
+export interface ObjectData extends Record< string, unknown > {
+	meta?: Record< string, unknown >;
+	status?: string;
+}
+
+export interface ConnectDocResult {
+	awareness?: Awareness;
+	destroy: () => void;
+}
 
 export type ConnectDoc = (
 	id: ObjectID,
 	type: ObjectType,
-	doc: CRDTDoc
-) => Promise< () => void >;
+	ydoc: Y.Doc
+) => Promise< ConnectDocResult >;
 
-export type SyncProvider = {
-	register: ( type: ObjectType, config: ObjectConfig ) => void;
-	bootstrap: (
-		type: ObjectType,
-		id: ObjectID,
-		handleChanges: ( data: any ) => void
-	) => Promise< CRDTDoc >;
-	update: ( type: ObjectType, id: ObjectID, data: any ) => void;
-	discard: ( type: ObjectType, id: ObjectID ) => Promise< CRDTDoc >;
+export type SyncConfig = {
+	applyChangesToCRDTDoc: (
+		ydoc: Y.Doc,
+		data: Partial< ObjectData >,
+		origin: string
+	) => void;
+	fromCRDTDoc: ( ydoc: Y.Doc ) => ObjectData;
+	getInitialObjectData: ( record: ObjectData ) => ObjectData;
+	getObjectId: ( data: ObjectData ) => ObjectID;
+	objectType: ObjectType;
+	supportsAwareness?: boolean;
+	supportsUndo?: boolean;
 };

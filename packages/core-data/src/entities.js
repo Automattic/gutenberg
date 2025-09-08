@@ -8,10 +8,23 @@ import { capitalCase, pascalCase } from 'change-case';
  */
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
-import { RichTextData } from '@wordpress/rich-text';
+import { parse } from '@wordpress/blocks';
+
+/**
+ * Internal dependencies
+ */
+import { defaultApplyChangesToCRDTDoc } from './utils/crdt';
 
 export const DEFAULT_ENTITY_KEY = 'id';
 const POST_RAW_ATTRIBUTES = [ 'title', 'excerpt', 'content' ];
+
+/**
+ * @param {Y.Doc} ydoc
+ * @return {import('@wordpress/sync').ObjectData} The JSON representation of the document.
+ */
+const defaultFromCRDTDoc = ( ydoc ) => {
+	return ydoc.getMap( 'document' ).toJSON();
+};
 
 export const rootEntitiesConfig = [
 	{
@@ -40,24 +53,6 @@ export const rootEntitiesConfig = [
 		// The entity doesn't support selecting multiple records.
 		// The property is maintained for backward compatibility.
 		plural: '__unstableBases',
-		syncConfig: {
-			fetch: async () => {
-				return apiFetch( { path: '/' } );
-			},
-			applyChangesToDoc: ( doc, changes ) => {
-				const document = doc.getMap( 'document' );
-				Object.entries( changes ).forEach( ( [ key, value ] ) => {
-					if ( document.get( key ) !== value ) {
-						document.set( key, value );
-					}
-				} );
-			},
-			fromCRDTDoc: ( doc ) => {
-				return doc.getMap( 'document' ).toJSON();
-			},
-		},
-		syncObjectType: 'root/base',
-		getSyncObjectId: () => 'index',
 	},
 	{
 		label: __( 'Post Type' ),
@@ -67,26 +62,6 @@ export const rootEntitiesConfig = [
 		baseURL: '/wp/v2/types',
 		baseURLParams: { context: 'edit' },
 		plural: 'postTypes',
-		syncConfig: {
-			fetch: async ( id ) => {
-				return apiFetch( {
-					path: `/wp/v2/types/${ id }?context=edit`,
-				} );
-			},
-			applyChangesToDoc: ( doc, changes ) => {
-				const document = doc.getMap( 'document' );
-				Object.entries( changes ).forEach( ( [ key, value ] ) => {
-					if ( document.get( key ) !== value ) {
-						document.set( key, value );
-					}
-				} );
-			},
-			fromCRDTDoc: ( doc ) => {
-				return doc.getMap( 'document' ).toJSON();
-			},
-		},
-		syncObjectType: 'root/postType',
-		getSyncObjectId: ( id ) => id,
 	},
 	{
 		name: 'media',
@@ -276,37 +251,27 @@ export const prePersistPostType = ( persistedRecord, edits ) => {
 	return newEdits;
 };
 
-const serialisableBlocksCache = new WeakMap();
-
-function makeBlockAttributesSerializable( attributes ) {
-	const newAttributes = { ...attributes };
-	for ( const [ key, value ] of Object.entries( attributes ) ) {
-		if ( value instanceof RichTextData ) {
-			newAttributes[ key ] = value.valueOf();
-		}
-	}
-	return newAttributes;
-}
-
-function makeBlocksSerializable( blocks ) {
-	return blocks.map( ( block ) => {
-		const { innerBlocks, attributes, ...rest } = block;
-		return {
-			...rest,
-			attributes: makeBlockAttributesSerializable( attributes ),
-			innerBlocks: makeBlocksSerializable( innerBlocks ),
-		};
-	} );
-}
-
 /**
  * Returns the list of post type entities.
  *
  * @return {Promise} Entities promise
  */
 async function loadPostTypeEntities() {
+	const syncedProperties = new Set( [
+		'blocks',
+		'featured_media',
+		'format',
+		'generated_slug',
+		'password',
+		'slug',
+		'sticky',
+		'tags',
+		'template',
+		'title',
+	] );
+
 	const postTypes = await apiFetch( {
-		path: '/wp/v2/types?context=view',
+		path: '/wp/v2/types?context=edit',
 	} );
 	return Object.entries( postTypes ?? {} ).map( ( [ name, postType ] ) => {
 		const isTemplate = [ 'wp_template', 'wp_template_part' ].includes(
@@ -334,39 +299,57 @@ async function loadPostTypeEntities() {
 			__unstablePrePersist: isTemplate ? undefined : prePersistPostType,
 			__unstable_rest_base: postType.rest_base,
 			syncConfig: {
-				fetch: async ( id ) => {
-					return apiFetch( {
-						path: `/${ namespace }/${ postType.rest_base }/${ id }?context=edit`,
-					} );
-				},
-				applyChangesToDoc: ( doc, changes ) => {
-					const document = doc.getMap( 'document' );
+				enabled: Boolean(
+					postType.supports?.[ 'collaborative-editing' ] &&
+						postType.supports?.editor
+				),
+				/**
+				 * @param {Y.Doc}  ydoc
+				 * @param {Object} changes
+				 * @param {string} origin
+				 */
+				applyChangesToCRDTDoc: ( ydoc, changes, origin ) => {
+					const filteredChanges = Object.fromEntries(
+						Object.entries( changes ).filter(
+							( [ key, value ] ) =>
+								syncedProperties.has( key ) &&
+								'function' !== typeof value // cannot serialize function values
+						)
+					);
 
-					Object.entries( changes ).forEach( ( [ key, value ] ) => {
-						if ( typeof value !== 'function' ) {
-							if ( key === 'blocks' ) {
-								if ( ! serialisableBlocksCache.has( value ) ) {
-									serialisableBlocksCache.set(
-										value,
-										makeBlocksSerializable( value )
-									);
-								}
-
-								value = serialisableBlocksCache.get( value );
-							}
-
-							if ( document.get( key ) !== value ) {
-								document.set( key, value );
-							}
-						}
-					} );
+					defaultApplyChangesToCRDTDoc(
+						ydoc,
+						filteredChanges,
+						origin
+					);
 				},
-				fromCRDTDoc: ( doc ) => {
-					return doc.getMap( 'document' ).toJSON();
+				fromCRDTDoc: defaultFromCRDTDoc,
+				/**
+				 * This initial object data represents the data that will be synced via
+				 * the CRDT document, which may differ from the entity record. There may
+				 * be properties that should not be synced, or properties that are
+				 * derived from the record.
+				 *
+				 * @param {import('@wordpress/sync').ObjectData} record
+				 * @return {import('@wordpress/sync').ObjectData} The initial data
+				 */
+				getInitialObjectData: ( record ) => {
+					// Mix in the parsed blocks into the record. Only allow properties in
+					// the synced properties set.
+					const content = record.content?.raw ?? record.content ?? '';
+					const blocks = parse( content );
+
+					return Object.fromEntries(
+						Object.entries( { ...record, blocks } ).filter(
+							( [ key ] ) => syncedProperties.has( key )
+						)
+					);
 				},
+				getObjectId: ( { id } ) => id,
+				objectType: `postType/${ postType.slug }`,
+				supportsAwareness: true,
+				supportsUndo: true,
 			},
-			syncObjectType: 'postType/' + postType.name,
-			getSyncObjectId: ( id ) => id,
 			supportsPagination: true,
 			getRevisionsUrl: ( parentId, revisionId ) =>
 				`/${ namespace }/${
@@ -413,24 +396,6 @@ async function loadSiteEntity() {
 		name: 'site',
 		kind: 'root',
 		baseURL: '/wp/v2/settings',
-		syncConfig: {
-			fetch: async () => {
-				return apiFetch( { path: '/wp/v2/settings' } );
-			},
-			applyChangesToDoc: ( doc, changes ) => {
-				const document = doc.getMap( 'document' );
-				Object.entries( changes ).forEach( ( [ key, value ] ) => {
-					if ( document.get( key ) !== value ) {
-						document.set( key, value );
-					}
-				} );
-			},
-			fromCRDTDoc: ( doc ) => {
-				return doc.getMap( 'document' ).toJSON();
-			},
-		},
-		syncObjectType: 'root/site',
-		getSyncObjectId: () => 'index',
 		meta: {},
 	};
 

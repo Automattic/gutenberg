@@ -400,39 +400,37 @@ export const editEntityRecord =
 		};
 		if ( window.__experimentalEnableSync && entityConfig.syncConfig ) {
 			if ( globalThis.IS_GUTENBERG_PLUGIN ) {
-				const objectId = entityConfig.getSyncObjectId( recordId );
+				// @todo this always updates the Yjs doc, which is undesirable, probably we can read the yjs
+				// content from the comment tag here
 				getSyncProvider().update(
-					entityConfig.syncObjectType + '--edit',
-					objectId,
-					edit.edits
+					entityConfig.syncConfig.objectType,
+					record,
+					edit.edits,
+					'gutenberg'
 				);
 			}
-		} else {
-			if ( ! options.undoIgnore ) {
-				select.getUndoManager().addRecord(
-					[
-						{
-							id: { kind, name, recordId },
-							changes: Object.keys( edits ).reduce(
-								( acc, key ) => {
-									acc[ key ] = {
-										from: editedRecord[ key ],
-										to: edits[ key ],
-									};
-									return acc;
-								},
-								{}
-							),
-						},
-					],
-					options.isCached
-				);
-			}
-			dispatch( {
-				type: 'EDIT_ENTITY_RECORD',
-				...edit,
-			} );
 		}
+		if ( ! options.undoIgnore ) {
+			select.getUndoManager().addRecord(
+				[
+					{
+						id: { kind, name, recordId },
+						changes: Object.keys( edits ).reduce( ( acc, key ) => {
+							acc[ key ] = {
+								from: editedRecord[ key ],
+								to: edits[ key ],
+							};
+							return acc;
+						}, {} ),
+					},
+				],
+				options.isCached
+			);
+		}
+		dispatch( {
+			type: 'EDIT_ENTITY_RECORD',
+			...edit,
+		} );
 	};
 
 /**
@@ -677,6 +675,21 @@ export const saveEntityRecord =
 							),
 						};
 					}
+					if (
+						window.__experimentalEnableSync &&
+						entityConfig.syncConfig?.enabled
+					) {
+						// Allow sync provider to create meta for the entity before persisting.
+						edits.meta = {
+							...edits.meta,
+							...( await getSyncProvider().createEntityMeta(
+								entityConfig.syncConfig,
+								persistedRecord,
+								edits
+							) ),
+						};
+					}
+
 					updatedRecord = await __unstableFetch( {
 						path,
 						method: recordId ? 'PUT' : 'POST',
