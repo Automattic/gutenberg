@@ -262,7 +262,6 @@ async function loadPostTypeEntities() {
 		'template',
 		'slug',
 		'title',
-		'revisions',
 	] );
 
 	const postTypes = await apiFetch( {
@@ -312,15 +311,14 @@ async function loadPostTypeEntities() {
 				 * @param {string}                                          origin
 				 * @return {void}
 				 */
-				applyChangesToCRDTDoc: ( crdtDoc, changes, record, origin ) => {
+				applyChangesToCRDTDoc: ( crdtDoc, changes, record, origin ) =>
 					applyPostChangesToCRDTDoc(
 						crdtDoc,
 						changes,
 						record,
 						syncedProperties,
 						origin
-					);
-				},
+					),
 
 				/**
 				 * Extract changes from a CRDT document that can be used to update the
@@ -352,11 +350,15 @@ async function loadPostTypeEntities() {
 					const content = record.content?.raw ?? record.content ?? '';
 					const blocks = parse( content );
 
-					return Object.fromEntries(
+					const finalState = Object.fromEntries(
 						Object.entries( { ...record, blocks } ).filter(
 							( [ key ] ) => syncedProperties.has( key )
 						)
 					);
+
+					// console.log( 'getInitialObjectData', { finalState } );
+
+					return finalState;
 				},
 
 				/**
