@@ -84,6 +84,7 @@ export class SyncProvider {
 
 		// Clean up connections and in-memory state when the entity is discarded.
 		const onDiscard = (): void => {
+			console.warn( 'Discarding entity', { objectType, objectId } );
 			connections.forEach( ( result ) => result.destroy() );
 			ydoc.off( 'update', onUpdate );
 			ydoc.destroy();
@@ -97,6 +98,8 @@ export class SyncProvider {
 			if ( LOCAL_ORIGINS.includes( origin ) ) {
 				return;
 			}
+
+			// console.warn( 'CRDT document updated from remote origin', { objectType, objectId, origin } );
 
 			void this.updateEntityRecord( objectType, objectId );
 		};
