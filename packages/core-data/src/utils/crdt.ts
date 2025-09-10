@@ -34,16 +34,22 @@ export function applyPostChangesToCRDTDoc(
 ): void {
 	const ymap = ydoc.getMap( DOCUMENT_MAP_KEY );
 
-	//console.debug( 'Applying post changes to CRDT doc', { changes } );
-
 	// Special case: Gutenberg doesn't issue a change for the status going from 'auto-draft' to 'draft'
-	if ( ! changes.status && ymap.has('status') && ymap.get('status') && record && record.status !== ymap.get( 'status' ) && ymap.get( 'status' ) === 'auto-draft' ) {
+	if (
+		! changes.status &&
+		ymap.has( 'status' ) &&
+		ymap.get( 'status' ) &&
+		record &&
+		record.status !== ymap.get( 'status' ) &&
+		ymap.get( 'status' ) === 'auto-draft'
+	) {
+		// eslint-disable-next-line no-console
 		console.warn( 'Status mismatch between CRDT and record', {
 			crdtStatus: ymap.get( 'status' ),
 			recordStatus: record.status,
 		} );
 
-		mergeValue( ymap.get('status'), record.status, ( value ) => {
+		mergeValue( ymap.get( 'status' ), record.status, ( value ) => {
 			ymap.set( 'status', value );
 			return value;
 		} );
@@ -169,8 +175,6 @@ export function getPostChangesFromCRDTDoc(
 			}
 
 			const currentValue = record[ key ];
-
-			//console.debug( 'Comparing CRDT and record values for getPostChangesFromCRDTDoc', { key, currentValue, newValue } );
 
 			switch ( key ) {
 				case 'blocks': {

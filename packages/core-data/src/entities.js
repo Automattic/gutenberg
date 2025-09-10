@@ -359,8 +359,6 @@ async function loadPostTypeEntities() {
 						)
 					);
 
-					// console.log( 'getInitialObjectData', { finalState } );
-
 					return finalState;
 				},
 
