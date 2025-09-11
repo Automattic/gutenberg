@@ -238,7 +238,9 @@ export class SyncProvider {
 			'syncProvider.getInitialCRDTDoc'
 		);
 
-		this.detectIfPostIsRestored( initialStateDoc, record, syncConfig );
+		initialStateDoc?.transact( () => {
+			this.detectIfPostIsRestored( initialStateDoc, record, syncConfig );
+		}, 'syncProvider.getInitialCRDTDoc' );
 
 		return initialStateDoc;
 	}
@@ -264,25 +266,37 @@ export class SyncProvider {
 
 				syncConfig.syncedProperties.forEach( ( property ) => {
 					// This has the revision property in here, that we want to steer cleer of.
-					if ( property === '_links' ) {
+					if ( property === '_links' || property === 'slug' ) {
 						return;
 					}
 
 					if ( property === 'blocks' ) {
 						const currentBlocks = ( ymap.get( 'blocks' ) as Y.Array< YBlock >).clone();
+						// eslint-disable-next-line no-console
+						console.log( 'Setting blocks from restored revision', { property, currentBlocks } );
 						ymap2.set( 'blocks', currentBlocks );
+						return;
+					}
+
+					// ToDo: Title doesn't reflect when both title and content have been synced. Need to investigate further.
+					if ( property === 'title' ) {
+						const currentTitle = ymap.get( 'title' ) as string;
+						// eslint-disable-next-line no-console
+						console.log( 'Setting title from restored revision', { property, currentTitle } );
+						ymap2.set( 'title', currentTitle );
 						return;
 					}
 
 					// This for properties that have been added in the future.
 					if ( ymap2.has( property ) && ! ymap.has( property ) ) {
+						// eslint-disable-next-line no-console
+						console.log( 'Deleting property from restored revision', { property } );
 						ymap2.delete( property );
 						return;
 					}
 
-					// ToDo: Title isn't correctly syncing here. Need to investigate further.
 					// This is for properties that have been deleted in the future or have updated.
-					if ( ymap.has( property ) ) {
+					if ( ymap.has( property ) && ymap.get( property ) ) {
 						const propertyValue = ymap.get( property );
 						// eslint-disable-next-line no-console
 						console.log( 'Setting property from restored revision', { property, propertyValue } );
