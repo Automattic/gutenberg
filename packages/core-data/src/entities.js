@@ -263,6 +263,7 @@ async function loadPostTypeEntities() {
 		'slug',
 		'title',
 		'content',
+		'_links',
 	] );
 
 	const postTypes = await apiFetch( {

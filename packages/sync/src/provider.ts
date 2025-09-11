@@ -84,7 +84,6 @@ export class SyncProvider {
 
 		// Clean up connections and in-memory state when the entity is discarded.
 		const onDiscard = (): void => {
-			console.warn( 'Discarding entity', { objectType, objectId } );
 			connections.forEach( ( result ) => result.destroy() );
 			ydoc.off( 'update', onUpdate );
 			ydoc.destroy();
@@ -98,8 +97,6 @@ export class SyncProvider {
 			if ( LOCAL_ORIGINS.includes( origin ) ) {
 				return;
 			}
-
-			// console.warn( 'CRDT document updated from remote origin', { objectType, objectId, origin } );
 
 			void this.updateEntityRecord( objectType, objectId );
 		};
@@ -209,6 +206,7 @@ export class SyncProvider {
 			persistedDoc &&
 			CRDT_DOC_VERSION === persistedDoc.meta?.get( 'version' )
 		) {
+			this.modifyInitialDocState( persistedDoc, record );
 			return persistedDoc;
 		}
 
@@ -227,7 +225,23 @@ export class SyncProvider {
 			'syncProvider.getInitialCRDTDoc'
 		);
 
+		this.modifyInitialDocState( initialStateDoc, record );
+
 		return initialStateDoc;
+	}
+
+	private modifyInitialDocState( initialStateDoc: CRDTDoc, record: ObjectData ): void {
+		// @ts-ignore
+		if ( record && record._links && record._links[ 'predecessor-version' ] && record._links[ 'predecessor-version' ].length > 0 && typeof record?.meta?.vip_rtc_state === 'string' && record?.meta?.vip_rtc_state !== '' ) {
+			// @ts-ignore
+			const expectedLastRevisionId = record?._links[ 'predecessor-version' ][ 0 ].id ?? 0;
+			// @ts-ignore
+			const revisionId = JSON.parse( record?.meta?.vip_rtc_state as string ?? '{}' ) as { lastRevisionId?: number };
+			if ( revisionId.lastRevisionId && Math.abs( expectedLastRevisionId - revisionId.lastRevisionId ) > 1 ) {
+				// eslint-disable-next-line no-console
+				console.warn( 'A revision for the current post has been loaded. The content/title is no longer up to date.', { expectedLastRevisionId, revisionId } );
+			}
+		}
 	}
 
 	/* eslint-disable @typescript-eslint/no-unused-vars */
