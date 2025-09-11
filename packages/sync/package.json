@@ -30,6 +30,7 @@
 	"sideEffects": false,
 	"dependencies": {
 		"@types/simple-peer": "^9.11.5",
+		"@wordpress/blocks": "file:../blocks",
 		"@wordpress/hooks": "file:../hooks",
 		"@wordpress/url": "file:../url",
 		"lib0": "^0.2.99",

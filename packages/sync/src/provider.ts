@@ -4,6 +4,12 @@
 import * as Y from 'yjs';
 
 /**
+ * WordPress dependencies
+ */
+// @ts-ignore - no types at the moment
+import { parse } from '@wordpress/blocks';
+
+/**
  * Internal dependencies
  */
 import { CRDT_DOC_VERSION } from './config';
@@ -20,6 +26,7 @@ import type {
 } from './types';
 import { UndoManager } from './undo-manager';
 import { createYjsDoc } from './utils';
+import * as buffer from 'lib0/buffer';
 
 interface EntityState {
 	discard: () => void;
@@ -206,7 +213,7 @@ export class SyncProvider {
 			persistedDoc &&
 			CRDT_DOC_VERSION === persistedDoc.meta?.get( 'version' )
 		) {
-			this.detectIfPostIsRestored( persistedDoc, record );
+			this.detectIfPostIsRestored( persistedDoc, record, syncConfig );
 			return persistedDoc;
 		}
 
@@ -225,21 +232,60 @@ export class SyncProvider {
 			'syncProvider.getInitialCRDTDoc'
 		);
 
-		this.detectIfPostIsRestored( initialStateDoc, record );
+		this.detectIfPostIsRestored( initialStateDoc, record, syncConfig );
 
 		return initialStateDoc;
 	}
 
-	private detectIfPostIsRestored( initialStateDoc: CRDTDoc, record: ObjectData ): void {
+	private detectIfPostIsRestored( initialStateDoc: CRDTDoc, record: ObjectData, syncConfig: SyncConfig ): void {
 		// @ts-ignore
 		if ( record && record._links && record._links[ 'predecessor-version' ] && record._links[ 'predecessor-version' ].length > 0 && typeof record?.meta?.vip_rtc_state === 'string' && record?.meta?.vip_rtc_state !== '' ) {
 			// @ts-ignore
 			const expectedLastRevisionId = record?._links[ 'predecessor-version' ][ 0 ].id ?? 0;
 			// @ts-ignore
-			const revisionId = JSON.parse( record?.meta?.vip_rtc_state as string ?? '{}' ) as { lastRevisionId?: number };
-			if ( revisionId.lastRevisionId && Math.abs( expectedLastRevisionId - revisionId.lastRevisionId ) > 1 ) {
+			const revisionId = JSON.parse( record?.meta?.vip_rtc_state as string ?? '{}' ) as { lastRevisionId?: number, crdtDoc: string };
+			if ( revisionId.lastRevisionId && revisionId.crdtDoc && Math.abs( expectedLastRevisionId - revisionId.lastRevisionId ) > 1 ) {
 				// eslint-disable-next-line no-console
 				console.warn( 'A revision for the current post has been loaded.', { expectedLastRevisionId, revisionId } );
+
+				const ydoc = new Y.Doc();
+				const yupdate = buffer.fromBase64( revisionId.crdtDoc );
+				Y.applyUpdateV2( ydoc, yupdate );
+
+				const ymap = ydoc.getMap( 'document' );
+				const ymap2 = initialStateDoc.getMap( 'document' );
+
+				syncConfig.syncedProperties.forEach( ( property ) => {
+					// This has the revision property in here, that we want to steer cleer of.
+					if ( property === '_links' ) {
+						return;
+					}
+
+					// ToDo: This currently results in empty blocks. The number of blocks are correct.
+					if ( property === 'blocks' ) {
+						const content = ymap.get( 'content' );
+						ymap2.set( 'blocks', parse( content ) )
+						return;
+					}
+
+					// This is for properties that have been deleted in the future.
+					if ( ymap.has( property ) && ! ymap2.has( property ) ) {
+						ymap2.set( property, ymap.get( property ) );
+						return;
+					}
+
+					// This for properties that have been added in the future.
+					if ( ymap2.has( property ) && ! ymap.has( property ) ) {
+						ymap2.delete( property );
+						return;
+					}
+
+					// This is for properties that exist in both, just update the value.
+					if ( ymap.has( property ) && ymap2.has( property ) ) {
+						const propertyValue = ymap.get( property );
+						ymap2.set( property, propertyValue );
+					}
+				} );
 			}
 		}
 	}
