@@ -16,6 +16,8 @@ import { parse } from '@wordpress/blocks';
 import {
 	applyPostChangesToCRDTDoc,
 	getPostChangesFromCRDTDoc,
+	getSyncedMetaPropertiesForPostType,
+	getSyncedPropertiesForPostType,
 } from './utils/crdt';
 
 export const DEFAULT_ENTITY_KEY = 'id';
@@ -248,22 +250,6 @@ export const prePersistPostType = ( persistedRecord, edits ) => {
  * @return {Promise} Entities promise
  */
 async function loadPostTypeEntities() {
-	const syncedProperties = new Set( [
-		'author',
-		'blocks',
-		'comment_status',
-		'date',
-		'excerpt',
-		'featured_media',
-		'format',
-		'ping_status',
-		'status',
-		'tags',
-		'template',
-		'slug',
-		'title',
-	] );
-
 	const postTypes = await apiFetch( {
 		path: '/wp/v2/types?context=edit',
 	} );
@@ -272,6 +258,10 @@ async function loadPostTypeEntities() {
 			name
 		);
 		const namespace = postType?.rest_namespace ?? 'wp/v2';
+		const syncedProperties = getSyncedPropertiesForPostType( postType );
+		const syncedMetaProperties =
+			getSyncedMetaPropertiesForPostType( postType );
+
 		return {
 			kind: 'postType',
 			baseURL: `/${ namespace }/${ postType.rest_base }`,
@@ -319,6 +309,7 @@ async function loadPostTypeEntities() {
 						changes,
 						record,
 						syncedProperties,
+						syncedMetaProperties,
 						origin
 					);
 				},
@@ -335,7 +326,8 @@ async function loadPostTypeEntities() {
 					getPostChangesFromCRDTDoc(
 						crdtDoc,
 						record,
-						syncedProperties
+						syncedProperties,
+						syncedMetaProperties
 					),
 
 				/**
@@ -376,12 +368,17 @@ async function loadPostTypeEntities() {
 				objectType: `postType/${ postType.slug }`,
 
 				/**
-				 * Sync features supported by the entity.
+				 * Sync features supported by the entity. Since overall syncing support
+				 * is gated by the `enabled` property, we don't need to check for
+				 * "editor" support here.
 				 *
 				 * @type {Record< string, boolean >}
 				 */
 				supports: {
 					awareness: true,
+					crdtPersistence: Boolean(
+						postType.supports?.[ 'custom-fields' ]
+					),
 					undo: true,
 				},
 
