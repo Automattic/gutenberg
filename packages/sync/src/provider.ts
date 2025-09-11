@@ -206,7 +206,7 @@ export class SyncProvider {
 			persistedDoc &&
 			CRDT_DOC_VERSION === persistedDoc.meta?.get( 'version' )
 		) {
-			this.modifyInitialDocState( persistedDoc, record );
+			this.detectIfPostIsRestored( persistedDoc, record );
 			return persistedDoc;
 		}
 
@@ -225,12 +225,12 @@ export class SyncProvider {
 			'syncProvider.getInitialCRDTDoc'
 		);
 
-		this.modifyInitialDocState( initialStateDoc, record );
+		this.detectIfPostIsRestored( initialStateDoc, record );
 
 		return initialStateDoc;
 	}
 
-	private modifyInitialDocState( initialStateDoc: CRDTDoc, record: ObjectData ): void {
+	private detectIfPostIsRestored( initialStateDoc: CRDTDoc, record: ObjectData ): void {
 		// @ts-ignore
 		if ( record && record._links && record._links[ 'predecessor-version' ] && record._links[ 'predecessor-version' ].length > 0 && typeof record?.meta?.vip_rtc_state === 'string' && record?.meta?.vip_rtc_state !== '' ) {
 			// @ts-ignore
@@ -239,7 +239,7 @@ export class SyncProvider {
 			const revisionId = JSON.parse( record?.meta?.vip_rtc_state as string ?? '{}' ) as { lastRevisionId?: number };
 			if ( revisionId.lastRevisionId && Math.abs( expectedLastRevisionId - revisionId.lastRevisionId ) > 1 ) {
 				// eslint-disable-next-line no-console
-				console.warn( 'A revision for the current post has been loaded. The content/title is no longer up to date.', { expectedLastRevisionId, revisionId } );
+				console.warn( 'A revision for the current post has been loaded.', { expectedLastRevisionId, revisionId } );
 			}
 		}
 	}
