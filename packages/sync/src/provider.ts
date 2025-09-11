@@ -145,6 +145,7 @@ export class SyncProvider {
 			ydoc,
 			() => {
 				Y.applyUpdate( ydoc, Y.encodeStateAsUpdate( initialDoc ) );
+				this.detectIfPostIsRestored( ydoc, record, syncConfig );
 			},
 			'syncProvider',
 			false
@@ -219,7 +220,6 @@ export class SyncProvider {
 			persistedDoc &&
 			CRDT_DOC_VERSION === persistedDoc.meta?.get( 'version' )
 		) {
-			this.detectIfPostIsRestored( persistedDoc, record, syncConfig );
 			return persistedDoc;
 		}
 
@@ -237,10 +237,6 @@ export class SyncProvider {
 			record,
 			'syncProvider.getInitialCRDTDoc'
 		);
-
-		initialStateDoc?.transact( () => {
-			this.detectIfPostIsRestored( initialStateDoc, record, syncConfig );
-		}, 'syncProvider.getInitialCRDTDoc' );
 
 		return initialStateDoc;
 	}
