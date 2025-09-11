@@ -268,7 +268,6 @@ export class SyncProvider {
 						return;
 					}
 
-					// ToDo: This currently results in empty blocks. The number of blocks are correct.
 					if ( property === 'blocks' ) {
 						const currentBlocks = ( ymap.get( 'blocks' ) as Y.Array< YBlock >).clone();
 						ymap2.set( 'blocks', currentBlocks );
@@ -281,9 +280,12 @@ export class SyncProvider {
 						return;
 					}
 
+					// ToDo: Title isn't correctly syncing here. Need to investigate further.
 					// This is for properties that have been deleted in the future or have updated.
 					if ( ymap.has( property ) ) {
 						const propertyValue = ymap.get( property );
+						// eslint-disable-next-line no-console
+						console.log( 'Setting property from restored revision', { property, propertyValue } );
 						ymap2.set( property, propertyValue );
 					}
 				} );
