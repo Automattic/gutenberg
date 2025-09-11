@@ -4,12 +4,6 @@
 import * as Y from 'yjs';
 
 /**
- * WordPress dependencies
- */
-// @ts-ignore - no types at the moment
-import { parse } from '@wordpress/blocks';
-
-/**
  * Internal dependencies
  */
 import { CRDT_DOC_VERSION } from './config';
@@ -37,11 +31,23 @@ interface EntityState {
 	ydoc: CRDTDoc;
 }
 
+type YBlock = Y.Map<
+	/* name, clientId, and originalContent are strings. */
+	| string
+	/* validationIssues? is an array of strings. */
+	| string[]
+	/* attributes is a Y.Map< unknown >. */
+	| YBlockAttributes
+	/* innerBlocks is a Y.Array< YBlock >. */
+	| Y.Array< YBlock >
+>;
+
+type YBlockAttributes = Y.Map< Y.Text | unknown >;
+
 const CRDT_STATE_MAP_KEY = 'state';
 const CRDT_STATE_PERSISTED_AT_KEY = 'persistedAt';
 
 const LOCAL_ORIGINS = [ 'gutenberg', 'syncProvider' ];
-
 export class SyncProvider {
 	private connectionCreators: ConnectDoc[];
 
@@ -237,6 +243,7 @@ export class SyncProvider {
 		return initialStateDoc;
 	}
 
+
 	private detectIfPostIsRestored( initialStateDoc: CRDTDoc, record: ObjectData, syncConfig: SyncConfig ): void {
 		// @ts-ignore
 		if ( record && record._links && record._links[ 'predecessor-version' ] && record._links[ 'predecessor-version' ].length > 0 && typeof record?.meta?.vip_rtc_state === 'string' && record?.meta?.vip_rtc_state !== '' ) {
@@ -263,14 +270,8 @@ export class SyncProvider {
 
 					// ToDo: This currently results in empty blocks. The number of blocks are correct.
 					if ( property === 'blocks' ) {
-						const content = ymap.get( 'content' );
-						ymap2.set( 'blocks', parse( content ) )
-						return;
-					}
-
-					// This is for properties that have been deleted in the future.
-					if ( ymap.has( property ) && ! ymap2.has( property ) ) {
-						ymap2.set( property, ymap.get( property ) );
+						const currentBlocks = ( ymap.get( 'blocks' ) as Y.Array< YBlock >).clone();
+						ymap2.set( 'blocks', currentBlocks );
 						return;
 					}
 
@@ -280,8 +281,8 @@ export class SyncProvider {
 						return;
 					}
 
-					// This is for properties that exist in both, just update the value.
-					if ( ymap.has( property ) && ymap2.has( property ) ) {
+					// This is for properties that have been deleted in the future or have updated.
+					if ( ymap.has( property ) ) {
 						const propertyValue = ymap.get( property );
 						ymap2.set( property, propertyValue );
 					}
