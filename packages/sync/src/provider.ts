@@ -145,10 +145,21 @@ export class SyncProvider {
 			ydoc,
 			() => {
 				Y.applyUpdate( ydoc, Y.encodeStateAsUpdate( initialDoc ) );
-				this.detectIfPostIsRestored( ydoc, record, syncConfig );
 			},
 			'syncProvider',
 			false
+		);
+
+		// If the post was restored from a revision, we want to apply those changes.
+		// This is done after applying the initial state so that the restored state
+		// doesn't get overriden by other clients.
+		Y.transact(
+			ydoc,
+			() => {
+				this.detectIfPostIsRestored( record, ydoc, syncConfig );
+			},
+			'syncProvider',
+			true
 		);
 	}
 
@@ -241,8 +252,7 @@ export class SyncProvider {
 		return initialStateDoc;
 	}
 
-
-	private detectIfPostIsRestored( initialStateDoc: CRDTDoc, record: ObjectData, syncConfig: SyncConfig ): void {
+	private detectIfPostIsRestored( record: ObjectData, initialStateDoc: CRDTDoc, syncConfig: SyncConfig ): void {
 		// @ts-ignore
 		if ( record && record._links && record._links[ 'predecessor-version' ] && record._links[ 'predecessor-version' ].length > 0 && typeof record?.meta?.vip_rtc_state === 'string' && record?.meta?.vip_rtc_state !== '' ) {
 			// @ts-ignore
