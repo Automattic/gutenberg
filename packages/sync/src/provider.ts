@@ -271,8 +271,8 @@ export class SyncProvider {
 				const ymap2 = initialStateDoc.getMap( 'document' );
 
 				syncConfig.syncedProperties.forEach( ( property ) => {
-					// This has the revision property in here, that we want to steer cleer of.
-					if ( property === '_links' || property === 'slug' ) {
+					// Skipping some properties that could create foot gun situations.
+					if ( property === 'slug' || property === 'generated_slug' || property === '_links' ) {
 						return;
 					}
 
@@ -284,7 +284,7 @@ export class SyncProvider {
 						return;
 					}
 
-					// ToDo: Title doesn't reflect when both title and content have been synced. Need to investigate further.
+					// ToDo: Title sometimes doesn't get updated correctly. Need to investigate.
 					if ( property === 'title' ) {
 						const currentTitle = ymap.get( 'title' ) as string;
 						// eslint-disable-next-line no-console
@@ -309,6 +309,8 @@ export class SyncProvider {
 						ymap2.set( property, propertyValue );
 					}
 				} );
+
+				ydoc.destroy();
 			}
 		}
 	}
