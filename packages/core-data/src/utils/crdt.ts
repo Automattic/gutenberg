@@ -43,12 +43,6 @@ export function applyPostChangesToCRDTDoc(
 		record.status !== ymap.get( 'status' ) &&
 		ymap.get( 'status' ) === 'auto-draft'
 	) {
-		// eslint-disable-next-line no-console
-		console.warn( 'Status mismatch between CRDT and record', {
-			crdtStatus: ymap.get( 'status' ),
-			recordStatus: record.status,
-		} );
-
 		mergeValue( ymap.get( 'status' ), record.status, ( value ) => {
 			ymap.set( 'status', value );
 			return value;

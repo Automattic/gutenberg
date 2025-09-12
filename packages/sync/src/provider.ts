@@ -284,7 +284,7 @@ export class SyncProvider {
 						return;
 					}
 
-					// ToDo: Title sometimes doesn't get updated correctly. Need to investigate.
+					// ToDo: Title sometimes doesn't get updated correctly. Need to investigate this further.
 					if ( property === 'title' ) {
 						const currentTitle = ymap.get( 'title' ) as string;
 						// eslint-disable-next-line no-console
