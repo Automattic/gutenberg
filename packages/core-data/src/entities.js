@@ -262,7 +262,6 @@ async function loadPostTypeEntities() {
 		'template',
 		'slug',
 		'title',
-		'content',
 		'_links',
 	] );
 
@@ -354,13 +353,11 @@ async function loadPostTypeEntities() {
 					const content = record.content?.raw ?? record.content ?? '';
 					const blocks = parse( content );
 
-					const finalState = Object.fromEntries(
+					return Object.fromEntries(
 						Object.entries( { ...record, blocks } ).filter(
 							( [ key ] ) => syncedProperties.has( key )
 						)
 					);
-
-					return finalState;
 				},
 
 				/**
