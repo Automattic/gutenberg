@@ -16,7 +16,6 @@ import { parse } from '@wordpress/blocks';
 import {
 	applyPostChangesToCRDTDoc,
 	getPostChangesFromCRDTDoc,
-	getSyncedMetaPropertiesForPostType,
 	getSyncedPropertiesForPostType,
 } from './utils/crdt';
 
@@ -259,8 +258,6 @@ async function loadPostTypeEntities() {
 		);
 		const namespace = postType?.rest_namespace ?? 'wp/v2';
 		const syncedProperties = getSyncedPropertiesForPostType( postType );
-		const syncedMetaProperties =
-			getSyncedMetaPropertiesForPostType( postType );
 
 		return {
 			kind: 'postType',
@@ -308,8 +305,8 @@ async function loadPostTypeEntities() {
 						crdtDoc,
 						changes,
 						record,
+						postType,
 						syncedProperties,
-						syncedMetaProperties,
 						origin
 					);
 				},
@@ -326,8 +323,8 @@ async function loadPostTypeEntities() {
 					getPostChangesFromCRDTDoc(
 						crdtDoc,
 						record,
-						syncedProperties,
-						syncedMetaProperties
+						postType,
+						syncedProperties
 					),
 
 				/**
