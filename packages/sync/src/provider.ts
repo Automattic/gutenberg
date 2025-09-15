@@ -20,7 +20,6 @@ import type {
 } from './types';
 import { UndoManager } from './undo-manager';
 import { createYjsDoc } from './utils';
-import * as buffer from 'lib0/buffer';
 
 interface EntityState {
 	discard: () => void;
@@ -30,19 +29,6 @@ interface EntityState {
 	undoManager?: UndoManager;
 	ydoc: CRDTDoc;
 }
-
-type YBlock = Y.Map<
-	/* name, clientId, and originalContent are strings. */
-	| string
-	/* validationIssues? is an array of strings. */
-	| string[]
-	/* attributes is a Y.Map< unknown >. */
-	| YBlockAttributes
-	/* innerBlocks is a Y.Array< YBlock >. */
-	| Y.Array< YBlock >
->;
-
-type YBlockAttributes = Y.Map< Y.Text | unknown >;
 
 const CRDT_STATE_MAP_KEY = 'state';
 const CRDT_STATE_PERSISTED_AT_KEY = 'persistedAt';
@@ -150,13 +136,13 @@ export class SyncProvider {
 			false
 		);
 
-		// If the post was restored from a revision, we want to apply those changes.
-		// This is done after applying the initial state so that the restored state
-		// doesn't get overriden by other clients.
+		// If the doc needs to be modified based on the initial state (e.g., post
+		// restored from revision), it's done after appling the initial state.
+		// This ensures that the restored state doesn't get overriden by other clients.
 		Y.transact(
 			ydoc,
 			() => {
-				this.detectIfPostIsRestored( record, ydoc, syncConfig );
+				this.overrideInitialRemoteUpdates( syncConfig, record, ydoc );
 			},
 			'syncProvider',
 			true
@@ -252,70 +238,26 @@ export class SyncProvider {
 		return initialStateDoc;
 	}
 
-	private detectIfPostIsRestored( record: ObjectData, initialStateDoc: CRDTDoc, syncConfig: SyncConfig ): void {
-		// @ts-ignore
-		if ( record && record._links && record._links[ 'predecessor-version' ] && record._links[ 'predecessor-version' ].length > 0 && typeof record?.meta?.vip_rtc_state === 'string' && record?.meta?.vip_rtc_state !== '' ) {
-			// @ts-ignore
-			const expectedLastRevisionId = record?._links[ 'predecessor-version' ][ 0 ].id ?? 0;
-			// @ts-ignore
-			const revisionId = JSON.parse( record?.meta?.vip_rtc_state as string ?? '{}' ) as { lastRevisionId?: number, crdtDoc: string };
-			if ( revisionId.lastRevisionId && revisionId.crdtDoc && Math.abs( expectedLastRevisionId - revisionId.lastRevisionId ) > 1 ) {
-				// eslint-disable-next-line no-console
-				console.warn( 'A revision for the current post has been loaded.', { expectedLastRevisionId, revisionId } );
-
-				const ydoc = new Y.Doc();
-				const yupdate = buffer.fromBase64( revisionId.crdtDoc );
-				Y.applyUpdateV2( ydoc, yupdate );
-
-				const ymap = ydoc.getMap( 'document' );
-				const ymap2 = initialStateDoc.getMap( 'document' );
-
-				syncConfig.syncedProperties.forEach( ( property ) => {
-					// Skipping some properties that could create foot gun situations.
-					if ( property === 'slug' || property === 'generated_slug' || property === '_links' ) {
-						return;
-					}
-
-					if ( property === 'blocks' ) {
-						const currentBlocks = ( ymap.get( 'blocks' ) as Y.Array< YBlock >).clone();
-						// eslint-disable-next-line no-console
-						console.log( 'Setting blocks from restored revision', { property, currentBlocks } );
-						ymap2.set( 'blocks', currentBlocks );
-						return;
-					}
-
-					// ToDo: Title sometimes doesn't get updated correctly. Need to investigate this further.
-					if ( property === 'title' ) {
-						const currentTitle = ymap.get( 'title' ) as string;
-						// eslint-disable-next-line no-console
-						console.log( 'Setting title from restored revision', { property, currentTitle } );
-						ymap2.set( 'title', currentTitle );
-						return;
-					}
-
-					// This for properties that have been added in the future.
-					if ( ymap2.has( property ) && ! ymap.has( property ) ) {
-						// eslint-disable-next-line no-console
-						console.log( 'Deleting property from restored revision', { property } );
-						ymap2.delete( property );
-						return;
-					}
-
-					// This is for properties that have been deleted in the future or have updated.
-					if ( ymap.has( property ) && ymap.get( property ) ) {
-						const propertyValue = ymap.get( property );
-						// eslint-disable-next-line no-console
-						console.log( 'Setting property from restored revision', { property, propertyValue } );
-						ymap2.set( property, propertyValue );
-					}
-				} );
-
-				ydoc.destroy();
-			}
-		}
-	}
-
 	/* eslint-disable @typescript-eslint/no-unused-vars */
+
+	/**
+	 * Override initial remote updates for the doc, coming from other clients.
+	 *
+	 * This would be used for situations like when a post is restored from
+	 * a revision and we want to ensure that no remote client overrides
+	 * those changes immediately after.
+	 *
+	 * @param {SyncConfig} _syncConfig  Sync configuration for the object type.
+	 * @param {ObjectData} _record      Record representing this object type.
+	 * @param {CRDTDoc}    _initialYDoc CRDT document to apply updates to.
+	 */
+	protected overrideInitialRemoteUpdates(
+		_syncConfig: SyncConfig,
+		_record: ObjectData,
+		_initialYDoc: CRDTDoc
+	): void {
+		// No-op by default.
+	}
 
 	/**
 	 * Create meta for the entity, e.g., to persist the CRDT doc against the
