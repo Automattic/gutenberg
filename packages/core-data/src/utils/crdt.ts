@@ -6,6 +6,8 @@ import * as fun from 'lib0/function';
 /**
  * WordPress dependencies
  */
+// @ts-ignore No types available.
+import { parse } from '@wordpress/blocks';
 import { applyFilters } from '@wordpress/hooks';
 import { type CRDTDoc, Y } from '@wordpress/sync';
 
@@ -27,7 +29,7 @@ const DOCUMENT_MAP_KEY = 'document';
  *
  * @param {CRDTDoc}       ydoc
  * @param {PostChanges}   changes
- * @param {Post}          record
+ * @param {Post}          rawRecord
  * @param {Type}          postType
  * @param {Set< string >} syncedProperties
  * @param {string}        origin
@@ -36,7 +38,7 @@ const DOCUMENT_MAP_KEY = 'document';
 export function applyPostChangesToCRDTDoc(
 	ydoc: CRDTDoc,
 	changes: PostChanges,
-	record: Post,
+	rawRecord: Post,
 	postType: Type,
 	syncedProperties: Set< string >,
 	origin: string
@@ -138,7 +140,7 @@ export function applyPostChangesToCRDTDoc(
 				// Undefined status indicates that we want to reset to the current
 				// persisted value.
 				if ( undefined === newStatus ) {
-					newStatus = record.status;
+					newStatus = rawRecord.status;
 				}
 
 				mergeValue( currentValue, newStatus, setValue );
@@ -262,6 +264,47 @@ export function getPostChangesFromCRDTDoc(
 				}
 			}
 		} )
+	);
+}
+
+export function getInitialPostObjectData(
+	record: Post,
+	postType: Type,
+	syncedProperties: Set< string >
+): PostChanges {
+	// Mix in the parsed blocks.
+	const blocks = parse( getRawValue( record.content ) );
+
+	return Object.fromEntries(
+		Object.entries( { ...record, blocks } )
+			// Only allow properties in the synced properties set.
+			.filter( ( [ key ] ) => syncedProperties.has( key ) )
+			.map( ( [ key, value ] ) => {
+				switch ( key ) {
+					case 'content':
+					case 'excerpt':
+					case 'title': {
+						return [ key, getRawValue( value ) ];
+					}
+
+					case 'meta': {
+						return [
+							key,
+							Object.fromEntries(
+								Object.entries( value ?? {} ).filter(
+									( [ metaKey ] ) =>
+										shouldSyncMetaForPostType(
+											metaKey,
+											postType
+										)
+								)
+							),
+						];
+					}
+				}
+
+				return [ key, value ];
+			} )
 	);
 }
 
