@@ -14,6 +14,10 @@ import { toHTMLString } from '../to-html-string';
 import { useDefaultStyle } from './use-default-style';
 import { useBoundaryStyle } from './use-boundary-style';
 import { useEventListeners } from './event-listeners';
+import { YTextAdapter } from '../y-text-adapter';
+
+// Local feature flag to enable Y.Text integration
+const USE_YTEXT_ADAPTER = true;
 
 export function useRichText( {
 	value = '',
@@ -60,9 +64,21 @@ export function useRichText( {
 	}
 
 	// Internal values are updated synchronously, unlike props and state.
+
+	// alecg: _valueRef is the external value for the prop. It is converted
+	// from the internal recordRef RichTextData format to the string or
+	// RichTextData object that props expect.
 	const _valueRef = useRef( value );
+
+	// alecg: recordRef is a cached value for the RichTextData state.
+	// The reference is overwritten on load and anytime onInput() receives
+	// a new keystroke and recreates it from the DOM.
 	const recordRef = useRef();
 
+	// alecg: Where we store the Y.Text instance.
+	const yTextAdapterRef = useRef();
+
+	// alecg: setRecordFromProps() is called on post load, or when a new block is created.
 	function setRecordFromProps() {
 		_valueRef.current = value;
 		recordRef.current = value;
@@ -88,6 +104,8 @@ export function useRichText( {
 		}
 		recordRef.current.start = selectionStart;
 		recordRef.current.end = selectionEnd;
+
+		yTextAdapterRef.current = new YTextAdapter( recordRef.current );
 	}
 
 	const hadSelectionUpdateRef = useRef( false );
@@ -116,6 +134,11 @@ export function useRichText( {
 	 */
 	function handleChange( newRecord ) {
 		recordRef.current = newRecord;
+		yTextAdapterRef.current.handleChange( newRecord );
+
+		// alecg: This ensures that the DOM matches the newRecord value.
+		// newRecord is derived from the DOM state in onInput(), but formatting
+		// changes still need to be applied to the DOM.
 		applyRecord( newRecord );
 
 		if ( disableFormats ) {
@@ -126,6 +149,7 @@ export function useRichText( {
 				: newRecord.formats;
 			newRecord = { ...newRecord, formats: newFormats };
 			if ( typeof value === 'string' ) {
+				// alecg: Set the external facing valueRef to match the expected prop type.
 				_valueRef.current = toHTMLString( {
 					value: newRecord,
 					preserveWhiteSpace,
@@ -142,6 +166,7 @@ export function useRichText( {
 		// We batch both calls to only attempt to rerender once.
 		registry.batch( () => {
 			onSelectionChange( start, end );
+			// alecg: Pass the external valueRef to onChange listeners to update props.
 			onChange( _valueRef.current, {
 				__unstableFormats: formats,
 				__unstableText: text,

@@ -56,6 +56,7 @@ export default ( props ) => ( element ) => {
 
 	let isComposing = false;
 
+	// alecg: onInput() is called when the user types into a block.
 	function onInput( event ) {
 		// Do not trigger a change if characters are being composed. Browsers
 		// will usually emit a final `input` event when the characters are
