@@ -43,8 +43,7 @@
 		"@wordpress/keycodes": "file:../keycodes",
 		"@wordpress/sync": "file:../sync",
 		"colord": "2.9.3",
-		"memize": "^2.1.0",
-		"quill-delta": "5.1.0"
+		"memize": "^2.1.0"
 	},
 	"peerDependencies": {
 		"react": "^18.0.0"

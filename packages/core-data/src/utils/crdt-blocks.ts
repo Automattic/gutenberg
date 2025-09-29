@@ -4,6 +4,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as math from 'lib0/math';
 import * as fun from 'lib0/function';
+import Delta from 'quill-delta';
 
 /**
  * WordPress dependencies
@@ -287,14 +288,31 @@ export function mergeCrdtBlocks(
 								return;
 							}
 
-							currentAttributes.set(
-								attributeName,
-								createNewYAttributeValue(
-									block.name,
-									attributeName,
-									attributeValue
-								)
+							const isRichText = isRichTextAttribute(
+								block.name,
+								attributeName
 							);
+
+							if ( isRichText ) {
+								// Rich text values are stored as persistent Y.Text instances.
+								// Update the value with a delta in place instead of overwriting it
+								// with createNewYAttributeValue().
+								const blockYText = currentAttributes.get(
+									attributeName
+								) as Y.Text;
+
+								const updatedValue = attributeValue as string;
+								mergeRichTextUpdate( blockYText, updatedValue );
+							} else {
+								currentAttributes.set(
+									attributeName,
+									createNewYAttributeValue(
+										block.name,
+										attributeName,
+										attributeValue
+									)
+								);
+							}
 						}
 					);
 
@@ -422,4 +440,28 @@ function isRichTextAttribute(
 	return (
 		cachedRichTextAttributes.get( blockName )?.has( attributeName ) ?? false
 	);
+}
+
+function mergeRichTextUpdate( blockYText: Y.Text, updatedValue: string ): void {
+	const doc = blockYText.doc;
+
+	if ( ! doc ) {
+		throw new Error( 'mergeCrdtBlocks: Y.Text is not attached to a Y.Doc' );
+	}
+
+	// Y.Text must be attached to a Y.Doc to be able to do operations on it.
+	// Create a temporary Y.Text attached to a local Y.Doc for delta computation.
+	const updatedYText = doc.getText( 'temporary-text' );
+	updatedYText.delete( 0, updatedYText.length );
+	updatedYText.insert( 0, updatedValue );
+
+	const currentValueAsDelta = new Delta( blockYText.toDelta() );
+	const updatedValueAsDelta = new Delta( updatedYText.toDelta() );
+
+	// TODO: We can pass in the pre-change cursor position as a hint to diff(), but
+	// newRecord's start and end are the after-change position.
+	// See if we can keep a copy of the prior selection position and use it here.
+	const deltaDiff = currentValueAsDelta.diff( updatedValueAsDelta );
+
+	blockYText.applyDelta( deltaDiff.ops );
 }
