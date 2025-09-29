@@ -60,15 +60,7 @@ export function useRichText( {
 	}
 
 	// Internal values are updated synchronously, unlike props and state.
-
-	// alecg: _valueRef is the external value for the prop. It is converted
-	// from the internal recordRef RichTextData format to the string or
-	// RichTextData object that props expect.
 	const _valueRef = useRef( value );
-
-	// alecg: recordRef is a cached value for the RichTextData state.
-	// The reference is overwritten on load and anytime onInput() receives
-	// a new keystroke and recreates it from the DOM.
 	const recordRef = useRef();
 
 	function setRecordFromProps() {
@@ -125,9 +117,6 @@ export function useRichText( {
 	function handleChange( newRecord ) {
 		recordRef.current = newRecord;
 
-		// alecg: This ensures that the DOM matches the newRecord value.
-		// newRecord is derived from the DOM state in onInput(), but formatting
-		// changes still need to be applied to the DOM.
 		applyRecord( newRecord );
 
 		if ( disableFormats ) {
@@ -138,7 +127,6 @@ export function useRichText( {
 				: newRecord.formats;
 			newRecord = { ...newRecord, formats: newFormats };
 			if ( typeof value === 'string' ) {
-				// alecg: Set the external facing valueRef to match the expected prop type.
 				_valueRef.current = toHTMLString( {
 					value: newRecord,
 					preserveWhiteSpace,
@@ -155,7 +143,6 @@ export function useRichText( {
 		// We batch both calls to only attempt to rerender once.
 		registry.batch( () => {
 			onSelectionChange( start, end );
-			// alecg: Pass the external valueRef to onChange listeners to update props.
 			onChange( _valueRef.current, {
 				__unstableFormats: formats,
 				__unstableText: text,
