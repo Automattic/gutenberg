@@ -77,6 +77,9 @@ const PostTitle = forwardRef( ( _, forwardedRef ) => {
 			} );
 		},
 		__unstableDisableFormats: false,
+
+		clientId: 'post-title',
+		blockName: 'post-title',
 	} );
 
 	function onInsertBlockAfter( blocks ) {
@@ -195,8 +198,11 @@ const PostTitle = forwardRef( ( _, forwardedRef ) => {
  *
  * @return {React.ReactNode} The rendered PostTitle component.
  */
-export default forwardRef( ( _, forwardedRef ) => (
-	<PostTypeSupportCheck supportKeys="title">
-		<PostTitle ref={ forwardedRef } />
-	</PostTypeSupportCheck>
-) );
+export default forwardRef( ( _, forwardedRef ) => {
+	// console.log( 'Rendering PostTitle forwardRef' );
+	return (
+		<PostTypeSupportCheck supportKeys="title">
+			<PostTitle ref={ forwardedRef } />
+		</PostTypeSupportCheck>
+	);
+} );

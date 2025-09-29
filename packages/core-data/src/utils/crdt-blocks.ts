@@ -138,6 +138,15 @@ function createNewYAttributeValue(
 ): Y.Text | unknown {
 	const isRichText = isRichTextAttribute( blockName, attributeName );
 
+	if ( isRichText ) {
+		console.log(
+			'Creating rich text attribute for block:',
+			blockName,
+			'attribute:',
+			attributeName
+		);
+	}
+
 	if ( isRichText && 'string' === typeof attributeValue ) {
 		return new Y.Text( attributeValue );
 	}
@@ -191,170 +200,198 @@ export function mergeCrdtBlocks(
 	incomingBlocks: Block[], // incomingBlocks represent JSON blocks being synced, either from a peer or from the local editor
 	_origin: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): void {
-	// Ensure we are working with serializable block data.
-	if ( ! serializableBlocksCache.has( incomingBlocks ) ) {
-		serializableBlocksCache.set(
-			incomingBlocks,
-			makeBlocksSerializable( incomingBlocks )
-		);
-	}
-	const allBlocks = serializableBlocksCache.get( incomingBlocks ) ?? [];
+	console.log( 'mergeCrdtBlocks with incomingBlocks:', incomingBlocks, {
+		origin: _origin,
+	} );
+	// // Ensure we are working with serializable block data.
+	// if ( ! serializableBlocksCache.has( incomingBlocks ) ) {
+	// 	serializableBlocksCache.set(
+	// 		incomingBlocks,
+	// 		makeBlocksSerializable( incomingBlocks )
+	// 	);
+	// }
+	// const allBlocks = serializableBlocksCache.get( incomingBlocks ) ?? [];
 
-	// Ensure we skip blocks that we don't want to sync at the moment
-	const blocksToSync = allBlocks.filter( ( block ) =>
-		shouldBlockBeSynced( block )
-	);
+	// // Ensure we skip blocks that we don't want to sync at the moment
+	// const blocksToSync = allBlocks.filter( ( block ) =>
+	// 	shouldBlockBeSynced( block )
+	// );
 
-	// This is a rudimentary diff implementation similar to the y-prosemirror diffing
-	// approach.
-	// A better implementation would also diff the textual content and represent it
-	// using a Y.Text type.
-	// However, at this time it makes more sense to keep this algorithm generic to
-	// support all kinds of block types.
-	// Ideally, we ensure that block data structure have a consistent data format.
-	// E.g.:
-	//   - textual content (using rich-text formatting?) may always be stored under `block.text`
-	//   - local information that shouldn't be shared (e.g. clientId or isDragging) is stored under `block.private`
-	const numOfCommonEntries = math.min(
-		blocksToSync.length ?? 0,
-		yblocks.length
-	);
+	// // This is a rudimentary diff implementation similar to the y-prosemirror diffing
+	// // approach.
+	// // A better implementation would also diff the textual content and represent it
+	// // using a Y.Text type.
+	// // However, at this time it makes more sense to keep this algorithm generic to
+	// // support all kinds of block types.
+	// // Ideally, we ensure that block data structure have a consistent data format.
+	// // E.g.:
+	// //   - textual content (using rich-text formatting?) may always be stored under `block.text`
+	// //   - local information that shouldn't be shared (e.g. clientId or isDragging) is stored under `block.private`
+	// const numOfCommonEntries = math.min(
+	// 	blocksToSync.length ?? 0,
+	// 	yblocks.length
+	// );
 
-	let left = 0;
-	let right = 0;
+	// let left = 0;
+	// let right = 0;
 
-	// skip equal blocks from left
-	for (
-		;
-		left < numOfCommonEntries &&
-		areBlocksEqual( blocksToSync[ left ], yblocks.get( left ) );
-		left++
-	) {
-		/* nop */
-	}
+	// // skip equal blocks from left
+	// for (
+	// 	;
+	// 	left < numOfCommonEntries &&
+	// 	areBlocksEqual( blocksToSync[ left ], yblocks.get( left ) );
+	// 	left++
+	// ) {
+	// 	/* nop */
+	// }
 
-	// skip equal blocks from right
-	for (
-		;
-		right < numOfCommonEntries - left &&
-		areBlocksEqual(
-			blocksToSync[ blocksToSync.length - right - 1 ],
-			yblocks.get( yblocks.length - right - 1 )
-		);
-		right++
-	) {
-		/* nop */
-	}
+	// // skip equal blocks from right
+	// for (
+	// 	;
+	// 	right < numOfCommonEntries - left &&
+	// 	areBlocksEqual(
+	// 		blocksToSync[ blocksToSync.length - right - 1 ],
+	// 		yblocks.get( yblocks.length - right - 1 )
+	// 	);
+	// 	right++
+	// ) {
+	// 	/* nop */
+	// }
 
-	const numOfUpdatesNeeded = numOfCommonEntries - left - right;
-	const numOfInsertionsNeeded = math.max(
-		0,
-		blocksToSync.length - yblocks.length
-	);
-	const numOfDeletionsNeeded = math.max(
-		0,
-		yblocks.length - blocksToSync.length
-	);
+	// const numOfUpdatesNeeded = numOfCommonEntries - left - right;
+	// const numOfInsertionsNeeded = math.max(
+	// 	0,
+	// 	blocksToSync.length - yblocks.length
+	// );
+	// const numOfDeletionsNeeded = math.max(
+	// 	0,
+	// 	yblocks.length - blocksToSync.length
+	// );
 
-	// updates
-	for ( let i = 0; i < numOfUpdatesNeeded; i++, left++ ) {
-		const block = blocksToSync[ left ];
-		const yblock = yblocks.get( left );
-		Object.entries( block ).forEach( ( [ key, value ] ) => {
-			switch ( key ) {
-				case 'attributes': {
-					const currentAttributes = yblock.get(
-						key
-					) as YBlockAttributes;
+	// // updates
+	// for ( let i = 0; i < numOfUpdatesNeeded; i++, left++ ) {
+	// 	const block = blocksToSync[ left ];
+	// 	console.log( 'Updating block:', block );
+	// 	const yblock = yblocks.get( left );
+	// 	Object.entries( block ).forEach( ( [ key, value ] ) => {
+	// 		switch ( key ) {
+	// 			case 'attributes': {
+	// 				const currentAttributes = yblock.get(
+	// 					key
+	// 				) as YBlockAttributes;
 
-					// If attributes are not set on the yblock, use the new values.
-					if ( ! currentAttributes ) {
-						yblock.set(
-							key,
-							createNewYAttributeMap( block.name, value )
-						);
-						break;
-					}
+	// 				// If attributes are not set on the yblock, use the new values.
+	// 				if ( ! currentAttributes ) {
+	// 					yblock.set(
+	// 						key,
+	// 						createNewYAttributeMap( block.name, value )
+	// 					);
+	// 					break;
+	// 				}
 
-					Object.entries( value ).forEach(
-						( [ attributeName, attributeValue ] ) => {
-							if (
-								fun.equalityDeep(
-									currentAttributes?.get( attributeName ),
-									attributeValue
-								)
-							) {
-								return;
-							}
+	// 				Object.entries( value ).forEach(
+	// 					( [ attributeName, attributeValue ] ) => {
+	// 						if (
+	// 							fun.equalityDeep(
+	// 								currentAttributes?.get( attributeName ),
+	// 								attributeValue
+	// 							)
+	// 						) {
+	// 							return;
+	// 						}
 
-							currentAttributes.set(
-								attributeName,
-								createNewYAttributeValue(
-									block.name,
-									attributeName,
-									attributeValue
-								)
-							);
-						}
-					);
+	// 						// alecg: We need to .get() the existing Y.Text value
+	// 						// and update it instead of creating a new Y.Text value.
+	// 						// Or,
+	// 						// Does the Y.Text instance update itself via YTextAdapter,
+	// 						// and we should ignore RichText types?
+	// 						const isRichText = isRichTextAttribute(
+	// 							block.name,
+	// 							attributeName
+	// 						);
 
-					// Delete any attributes that are no longer present.
-					currentAttributes.forEach(
-						( _attrValue: unknown, attrName: string ) => {
-							if ( ! value.hasOwnProperty( attrName ) ) {
-								currentAttributes.delete( attrName );
-							}
-						}
-					);
+	// 						if ( isRichText ) {
+	// 							console.log(
+	// 								'mergeCrdtBlocks: ignoring RichText attribute:',
+	// 								attributeName
+	// 							);
+	// 							// RichText attributes manage their own persistent Y.Text instance.
+	// 							// Do nothing
+	// 						} else {
+	// 							console.log(
+	// 								'mergeCrdtBlocks: setting attribute:',
+	// 								attributeName
+	// 							);
+	// 							currentAttributes.set(
+	// 								attributeName,
+	// 								createNewYAttributeValue(
+	// 									block.name,
+	// 									attributeName,
+	// 									attributeValue
+	// 								)
+	// 							);
+	// 						}
+	// 					}
+	// 				);
 
-					break;
-				}
+	// 				// Delete any attributes that are no longer present.
+	// 				currentAttributes.forEach(
+	// 					( _attrValue: unknown, attrName: string ) => {
+	// 						if ( ! value.hasOwnProperty( attrName ) ) {
+	// 							currentAttributes.delete( attrName );
+	// 						}
+	// 					}
+	// 				);
 
-				case 'innerBlocks': {
-					// Recursively merge innerBlocks
-					const yInnerBlocks = yblock.get( key ) as Y.Array< YBlock >;
-					mergeCrdtBlocks( yInnerBlocks, value ?? [], _origin );
-					break;
-				}
+	// 				break;
+	// 			}
 
-				default:
-					if (
-						! fun.equalityDeep( block[ key ], yblock.get( key ) )
-					) {
-						yblock.set( key, value );
-					}
-			}
-		} );
-		yblock.forEach( ( _v, k ) => {
-			if ( ! block.hasOwnProperty( k ) ) {
-				yblock.delete( k );
-			}
-		} );
-	}
+	// 			case 'innerBlocks': {
+	// 				// Recursively merge innerBlocks
+	// 				const yInnerBlocks = yblock.get( key ) as Y.Array< YBlock >;
+	// 				mergeCrdtBlocks( yInnerBlocks, value ?? [], _origin );
+	// 				break;
+	// 			}
 
-	// deletes
-	yblocks.delete( left, numOfDeletionsNeeded );
+	// 			default:
+	// 				if (
+	// 					! fun.equalityDeep( block[ key ], yblock.get( key ) )
+	// 				) {
+	// 					yblock.set( key, value );
+	// 				}
+	// 		}
+	// 	} );
+	// 	yblock.forEach( ( _v, k ) => {
+	// 		if ( ! block.hasOwnProperty( k ) ) {
+	// 			yblock.delete( k );
+	// 		}
+	// 	} );
+	// }
 
-	// inserts
-	for ( let i = 0; i < numOfInsertionsNeeded; i++, left++ ) {
-		const newBlock = [ createNewYBlock( blocksToSync[ left ] ) ];
+	// // deletes
+	// yblocks.delete( left, numOfDeletionsNeeded );
 
-		yblocks.insert( left, newBlock );
-	}
+	// // inserts
+	// for ( let i = 0; i < numOfInsertionsNeeded; i++, left++ ) {
+	// 	console.log( 'Inserting a new block:', blocksToSync[ left ] );
+	// 	const newBlock = [ createNewYBlock( blocksToSync[ left ] ) ];
 
-	// remove duplicate clientids
-	const knownClientIds = new Set< string >();
-	for ( let j = 0; j < yblocks.length; j++ ) {
-		const yblock: YBlock = yblocks.get( j );
+	// 	yblocks.insert( left, newBlock );
+	// }
 
-		let clientId: string = yblock.get( 'clientId' ) as string;
+	// // remove duplicate clientids
+	// const knownClientIds = new Set< string >();
+	// for ( let j = 0; j < yblocks.length; j++ ) {
+	// 	const yblock: YBlock = yblocks.get( j );
 
-		if ( knownClientIds.has( clientId ) ) {
-			clientId = uuidv4();
-			yblock.set( 'clientId', clientId );
-		}
-		knownClientIds.add( clientId );
-	}
+	// 	let clientId: string = yblock.get( 'clientId' ) as string;
+
+	// 	if ( knownClientIds.has( clientId ) ) {
+	// 		clientId = uuidv4();
+	// 		yblock.set( 'clientId', clientId );
+	// 	}
+	// 	knownClientIds.add( clientId );
+	// }
 }
 
 /**
@@ -381,6 +418,13 @@ function shouldBlockBeSynced( block: Block ): boolean {
 
 	// Allow all other blocks to be synced.
 	return true;
+}
+
+function isManagedAttribute(
+	blockName: string,
+	attributeName: string
+): boolean {
+	return false;
 }
 
 // Cache rich-text attributes for all block types.

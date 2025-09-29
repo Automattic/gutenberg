@@ -390,6 +390,9 @@ export function RichTextWrapper(
 		__unstableAfterParse: addEditorOnlyFormats,
 		__unstableBeforeSerialize: removeEditorOnlyFormats,
 		__unstableAddInvisibleFormats: addInvisibleFormats,
+
+		clientId,
+		blockName,
 	} );
 	const autocompleteProps = useBlockEditorAutocompleteProps( {
 		onReplace,

@@ -16,9 +16,6 @@ import { useBoundaryStyle } from './use-boundary-style';
 import { useEventListeners } from './event-listeners';
 import { YTextAdapter } from '../y-text-adapter';
 
-// Local feature flag to enable Y.Text integration
-const USE_YTEXT_ADAPTER = true;
-
 export function useRichText( {
 	value = '',
 	selectionStart,
@@ -33,6 +30,9 @@ export function useRichText( {
 	__unstableAfterParse,
 	__unstableBeforeSerialize,
 	__unstableAddInvisibleFormats,
+	// Temporary (?) props
+	clientId,
+	blockName,
 } ) {
 	const registry = useRegistry();
 	const [ , forceRender ] = useReducer( () => ( {} ) );
@@ -75,11 +75,11 @@ export function useRichText( {
 	// a new keystroke and recreates it from the DOM.
 	const recordRef = useRef();
 
-	// alecg: Where we store the Y.Text instance.
+	// alecg: Where we store Y.Text representation (derived from recordRef updates).
 	const yTextAdapterRef = useRef();
 
-	// alecg: setRecordFromProps() is called on post load, or when a new block is created.
 	function setRecordFromProps() {
+		console.log( 'setRecordFromProps:', { clientId, blockName, value } );
 		_valueRef.current = value;
 		recordRef.current = value;
 		if ( ! ( value instanceof RichTextData ) ) {
@@ -105,7 +105,13 @@ export function useRichText( {
 		recordRef.current.start = selectionStart;
 		recordRef.current.end = selectionEnd;
 
-		yTextAdapterRef.current = new YTextAdapter( recordRef.current );
+		if ( ! yTextAdapterRef.current ) {
+			console.log( 'Creating a new YTextAdapter for:', {
+				clientId,
+				blockName,
+			} );
+			yTextAdapterRef.current = new YTextAdapter( clientId );
+		}
 	}
 
 	const hadSelectionUpdateRef = useRef( false );

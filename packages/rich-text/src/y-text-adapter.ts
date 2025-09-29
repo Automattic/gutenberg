@@ -13,47 +13,54 @@ import type { RichTextValue } from './types';
 import { create } from './create';
 import { toHTMLString } from './to-html-string';
 import Delta from 'quill-delta';
-
-const Y_MAP_KEY = 'text-map';
-const Y_TEXT_KEY = 'text';
-const TEMPORARY_Y_TEXT_KEY = 'text-update';
+import { addAction } from '@wordpress/hooks';
 
 /**
  * YTextAdapter class that encapsulates Y.Text operations and provides
  * a bridge between Y.Text and RichTextValue formats.
  */
 export class YTextAdapter {
-	private yDoc: Y.Doc;
-	private yTextMap: Y.Map< Y.Text >;
-	private yText: Y.Text;
+	/* The Y.Text instance that is shared with other users. */
+	private sharedYText: Y.Text | undefined;
+	private clientId: string;
 
 	/**
 	 * Create a new YTextAdapter instance.
-	 * @param initialValue
+	 * @param clientId
 	 */
-	constructor( initialValue?: RichTextValue ) {
-		// Create a new Y.Doc for the adapter. A root Y.Doc is needed to
-		// use the Y.Text API.
-		this.yDoc = new Y.Doc();
+	constructor( clientId: string ) {
+		this.clientId = clientId;
+		// // Create a new Y.Doc for the adapter. A root Y.Doc is needed to
+		// // use the Y.Text API with the temporary Y.Text instance.
+		// this.yDoc = new Y.Doc();
+		// this.previousYTextValue = this.yDoc.getText( INTERNAL_Y_TEXT_KEY );
 
-		// Create a map we can use to store Y.Text instances.
-		this.yTextMap = this.yDoc.getMap( Y_MAP_KEY );
-
-		if ( initialValue ) {
-			const richTextHtml = toHTMLString( { value: initialValue } );
-			this.yText = new Y.Text( richTextHtml );
-		} else {
-			this.yText = new Y.Text();
+		if ( 'post-title' === clientId ) {
+			// ydoc.get('title') needs to be converted into a Y.Text instance.
+			return;
 		}
 
-		this.yTextMap.set( Y_TEXT_KEY, this.yText );
+		const yText = yTextMap.get( clientId );
+
+		if ( yText === undefined ) {
+			throw new Error(
+				'YTextAdapter: No Y.Text instance found for clientId: ' +
+					clientId
+			);
+		} else {
+			this.sharedYText = yText;
+		}
 	}
 
 	/**
 	 * Get the current RichTextValue representation.
 	 */
 	getRichTextValue(): RichTextValue {
-		const yValue = this.yText.toJSON();
+		if ( ! this.sharedYText ) {
+			// This can happen for the post-title block.
+			return create( { html: 'dummy-value' } );
+		}
+		const yValue = this.sharedYText.toJSON();
 		const richTextValue = create( { html: yValue } );
 		return richTextValue;
 	}
@@ -63,15 +70,20 @@ export class YTextAdapter {
 	 * @param newRecord The new RichTextValue to apply
 	 */
 	handleChange( newRecord: RichTextValue ): void {
-		// Y.Text must be attached to a Y.Doc to be able to do operations on it.
-		// Create a temporary Y.Text attached to the local Y.Doc for delta computation.
-		const newValue = toHTMLString( { value: newRecord } );
-		const newYText = this.yTextMap.set(
-			TEMPORARY_Y_TEXT_KEY,
-			new Y.Text( newValue )
-		);
+		if ( ! this.sharedYText ) {
+			return;
+		}
 
-		const currentValueAsDelta = new Delta( this.yText.toDelta() );
+		const newHtml = toHTMLString( { value: newRecord } );
+		const newYText = new Y.Text( newHtml );
+
+		// Y.Text must be attached to a Y.Doc to be able to do operations on it.
+		// Create a temporary Y.Text attached to a local Y.Doc for delta computation.
+		const localYDoc = new Y.Doc();
+		const localMap = localYDoc.getMap( 'map' );
+		localMap.set( 'local-text', newYText );
+
+		const currentValueAsDelta = new Delta( this.sharedYText.toDelta() );
 		const updatedValueAsDelta = new Delta( newYText.toDelta() );
 
 		// TODO: We can pass in the pre-change cursor position as a hint to diff(), but
@@ -79,10 +91,20 @@ export class YTextAdapter {
 		// See if we can keep a copy of the prior selection position and use it here.
 		const deltaDiff = currentValueAsDelta.diff( updatedValueAsDelta );
 
-		this.yText.applyDelta( deltaDiff.ops );
-		console.log( 'yText after change:', this.yText.toJSON() );
-
-		// Clean up the temporary Y.Text instance.
-		this.yTextMap.delete( TEMPORARY_Y_TEXT_KEY );
+		console.log( 'Applying delta to sharedYText:', {
+			diff: deltaDiff.ops,
+		} );
+		this.sharedYText.applyDelta( deltaDiff.ops );
 	}
 }
+
+// Temporary: Gather Y.Text instances
+const yTextMap = new Map< string, Y.Text >();
+
+addAction(
+	'sync.broadcastYTextInstance',
+	'YTextAdapter',
+	( { clientId, yText } ) => {
+		yTextMap.set( clientId, yText );
+	}
+);

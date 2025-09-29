@@ -16,6 +16,7 @@ import {
 	CRDT_STATE_RESTORED_AT_KEY as RESTORED_AT_KEY,
 	CRDT_STATE_RESTORED_BY_KEY as RESTORED_BY_KEY,
 	LOCAL_SYNC_PROVIDER_ORIGIN,
+	CRDT_RECORD_MAP_KEY,
 } from './config';
 import type {
 	ConnectDoc,
@@ -29,7 +30,7 @@ import type {
 	RecordHandlers,
 } from './types';
 import { UndoManager } from './undo-manager';
-import { createYjsDoc } from './utils';
+import { createYjsDoc, broadcastYTextInstances } from './utils';
 
 interface EntityState {
 	awareness?: Awareness;
@@ -112,6 +113,8 @@ export class SyncProvider {
 				return;
 			}
 
+			console.log( 'onRecordUpdate:', { _events, transaction } );
+
 			void this.updateEntityRecord( objectType, objectId );
 		};
 
@@ -157,6 +160,7 @@ export class SyncProvider {
 		// Attach observers.
 		recordMap.observeDeep( onRecordUpdate );
 		stateMap.observe( onStateUpdate );
+		let appliedDoc;
 
 		// Get the initial document state.
 		const initialDoc = await this.getInitialCRDTDoc(
@@ -203,6 +207,10 @@ export class SyncProvider {
 				},
 			} );
 		}
+
+		const ymap = ydoc.getMap( CRDT_RECORD_MAP_KEY );
+		const blocks = ymap.get( 'blocks' ) as Y.Array< Y.Map< unknown > >;
+		broadcastYTextInstances( blocks );
 	}
 
 	/**

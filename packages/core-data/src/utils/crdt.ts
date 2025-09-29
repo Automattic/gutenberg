@@ -17,6 +17,7 @@ import { type CRDTDoc, CRDT_RECORD_MAP_KEY, Y } from '@wordpress/sync';
 import { mergeCrdtBlocks, type Block, type YBlock } from './crdt-blocks';
 import { type Post } from '../entity-types/post';
 import { type Type } from '../entity-types';
+import { YTextAdapter } from '@wordpress/rich-text/src/y-text-adapter';
 
 type PostChanges = Partial< Post > & { blocks?: Block[] };
 

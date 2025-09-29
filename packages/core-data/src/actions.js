@@ -400,12 +400,12 @@ export const editEntityRecord =
 		};
 		if ( window.__experimentalEnableSync && entityConfig.syncConfig ) {
 			if ( globalThis.IS_GUTENBERG_PLUGIN ) {
-				getSyncProvider().updateCRDTDoc(
-					entityConfig.syncConfig,
-					record,
-					edit.edits,
-					'gutenberg'
-				);
+				// getSyncProvider().updateCRDTDoc(
+				// 	entityConfig.syncConfig,
+				// 	record,
+				// 	edit.edits,
+				// 	'gutenberg'
+				// );
 			}
 		}
 		if ( ! options.undoIgnore ) {
