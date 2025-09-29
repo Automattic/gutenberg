@@ -13,7 +13,6 @@
 		{ "path": "../element" },
 		{ "path": "../escape-html" },
 		{ "path": "../i18n" },
-		{ "path": "../keycodes" },
-		{ "path": "../sync" }
+		{ "path": "../keycodes" }
 	]
 }

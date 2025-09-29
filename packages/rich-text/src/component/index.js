@@ -116,7 +116,6 @@ export function useRichText( {
 	 */
 	function handleChange( newRecord ) {
 		recordRef.current = newRecord;
-
 		applyRecord( newRecord );
 
 		if ( disableFormats ) {
