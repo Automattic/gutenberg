@@ -17,8 +17,11 @@ import { type CRDTDoc, CRDT_RECORD_MAP_KEY, Y } from '@wordpress/sync';
 import { mergeCrdtBlocks, type Block, type YBlock } from './crdt-blocks';
 import { type Post } from '../entity-types/post';
 import { type Type } from '../entity-types';
+import type { WPBlockSelection } from '../../../editor/build-types/store/selectors';
 
 type PostChanges = Partial< Post > & { blocks?: Block[] };
+
+let lastSelection: WPBlockSelection | null = null;
 
 /**
  * Given a set of local changes to a post record, apply those changes to the
@@ -72,7 +75,12 @@ export function applyPostChangesToCRDTDoc(
 
 				// Merge blocks does not need `setValue` because it is operating on a
 				// Yjs type that is already in the Y.Doc.
-				mergeCrdtBlocks( currentBlocks, newBlocks, origin );
+				mergeCrdtBlocks(
+					currentBlocks,
+					newBlocks,
+					lastSelection,
+					origin
+				);
 				break;
 			}
 
@@ -166,6 +174,18 @@ export function applyPostChangesToCRDTDoc(
 			}
 		}
 	} );
+
+	// Update the lastSelection for CRDT use
+	if ( 'selection' in changes ) {
+		const selection = changes?.selection as
+			| {
+					selectionStart: WPBlockSelection;
+					selectionEnd: WPBlockSelection;
+			  }
+			| undefined;
+
+		lastSelection = selection?.selectionStart ?? null;
+	}
 }
 
 /**
