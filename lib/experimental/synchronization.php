@@ -32,7 +32,16 @@ function gutenberg_add_collaborative_editing_post_type_support() {
 		return;
 	}
 
-	foreach ( array( 'page', 'post' ) as $post_type ) {
+	/*
+	 * Filter the post types that support collaborative editing.
+	 * By default, only 'post' and 'page' support it.
+	 *
+	 * @param array $post_types Array of post type names.
+	 * @return array Filtered array of post type names.
+	 */
+	$post_types = apply_filters( 'collaborative_editing_post_types', array( 'page', 'post' ) );
+
+	foreach ( $post_types as $post_type ) {
 		if ( post_type_exists( $post_type ) ) {
 			add_post_type_support( $post_type, 'collaborative-editing' );
 		}
