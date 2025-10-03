@@ -37,26 +37,17 @@ interface EntityState {
 	handlers: RecordHandlers;
 	objectId: ObjectID;
 	syncConfig: SyncConfig;
-	undoManager?: UndoManager;
 	ydoc: CRDTDoc;
 }
 
+/**
+ * The SyncProvider manages access to CRDT documents for multiple entities,
+ * including their lifecycle, connections, and syncing changes between the CRDT
+ * document and the local store.
+ */
 export class SyncProvider {
 	private connectionCreators: ConnectDoc[];
-
-	/**
-	 * CAUTION: We currently store a single UndoManager instance under these
-	 * assumptions:
-	 *
-	 * 1. Only entities loaded by the block editor support an undo manager.
-	 * 2. Only one such entity is loaded at a time.
-	 * 3. The entity's SyncConfig has `supports.undo` set to true.
-	 *
-	 * If these assumptions fail, we will need to refactor the selectors provided
-	 * by `@wordpress/core-data` (e.g., `getUndoManager`) to support multiple
-	 * UndoManager instances by requiring the entity type and ID as parameters.
-	 */
-	private undoManager: UndoManager | undefined;
+	private undoManager: UndoManager;
 
 	protected entityStates: Map< EntityID, EntityState > = new Map();
 
@@ -67,6 +58,7 @@ export class SyncProvider {
 	 */
 	public constructor( connectionCreators: ConnectDoc[] = [] ) {
 		this.connectionCreators = connectionCreators;
+		this.undoManager = UndoManager.create();
 	}
 
 	/**
@@ -146,8 +138,7 @@ export class SyncProvider {
 		}
 
 		if ( syncConfig.supports?.undo ) {
-			entityState.undoManager = new UndoManager( ydoc );
-			this.undoManager = entityState.undoManager;
+			this.undoManager.addToScope( recordMap );
 		}
 
 		this.entityStates.set( entityId, entityState );
@@ -167,7 +158,7 @@ export class SyncProvider {
 		// Apply the initial document to the current document as a singular update.
 		if ( initialDoc ) {
 			ydoc.transact( () => {
-				Y.applyUpdate( ydoc, Y.encodeStateAsUpdate( initialDoc ) );
+				Y.applyUpdateV2( ydoc, Y.encodeStateAsUpdateV2( initialDoc ) );
 			}, LOCAL_SYNC_PROVIDER_ORIGIN );
 		}
 
@@ -346,10 +337,10 @@ export class SyncProvider {
 	/**
 	 * Get the undo manager.
 	 *
-	 * @return {UndoManager | null} The undo manager, or null if unsupported.
+	 * @return {UndoManager} The undo manager.
 	 */
-	public getUndoManager(): UndoManager | null {
-		return this.undoManager ?? null;
+	public getUndoManager(): UndoManager {
+		return this.undoManager;
 	}
 
 	/**

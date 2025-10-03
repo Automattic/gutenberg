@@ -14,6 +14,7 @@ import { Y } from '@wordpress/sync';
 
 // @ts-expect-error - This is a TypeScript file, and @wordpress/blocks doesn't have a tsconfig.json?
 import { getBlockTypes } from '@wordpress/blocks';
+
 /**
  * Internal dependencies
  */
