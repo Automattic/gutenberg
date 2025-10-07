@@ -45,7 +45,6 @@ export function ExperimentalBlockCanvas( {
 		( select ) => unlock( select( blockEditorStore ) ).getZoomLevel(),
 		[]
 	);
-
 	const zoomOutIframeProps =
 		zoomLevel !== 100 && ! isTabletViewport
 			? {
