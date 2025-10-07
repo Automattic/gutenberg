@@ -17,7 +17,7 @@ import { type CRDTDoc, CRDT_RECORD_MAP_KEY, Y } from '@wordpress/sync';
 import { mergeCrdtBlocks, type Block, type YBlock } from './crdt-blocks';
 import { type Post } from '../entity-types/post';
 import { type Type } from '../entity-types';
-import type { WPBlockSelection } from '../../../editor/build-types/store/selectors';
+import type { WPBlockSelection } from '../types';
 
 type PostChanges = Partial< Post > & { blocks?: Block[] };
 

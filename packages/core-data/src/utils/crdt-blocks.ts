@@ -18,7 +18,7 @@ import { getBlockTypes } from '@wordpress/blocks';
 /**
  * Internal dependencies
  */
-import type { WPBlockSelection } from '../../../editor/build-types/store/selectors';
+import type { WPBlockSelection } from '../types';
 
 interface BlockAttributes {
 	[ key: string ]: unknown;
