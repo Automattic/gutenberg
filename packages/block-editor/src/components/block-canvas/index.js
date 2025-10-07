@@ -4,6 +4,7 @@
 import { useMergeRefs, useViewportMatch } from '@wordpress/compose';
 import { useRef } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
+import { createSlotFill } from '@wordpress/components';
 
 /**
  * Internal dependencies
@@ -18,7 +19,8 @@ import { useBlockSelectionClearer } from '../block-selection-clearer';
 import { useBlockCommands } from '../use-block-commands';
 import { store as blockEditorStore } from '../../store';
 import { unlock } from '../../lock-unlock';
-import { BlockCanvasCover } from '../../index';
+
+export const BlockCanvasCover = createSlotFill( 'BlockCanvasCover' );
 
 // EditorStyles is a memoized component, so avoid passing a new
 // object reference on each render.
