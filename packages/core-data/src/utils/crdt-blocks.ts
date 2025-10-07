@@ -460,7 +460,6 @@ function isRichTextAttribute(
 }
 
 let localDoc: Y.Doc | null = null;
-let localYText: Y.Text | null = null;
 
 /**
  * Given a Y.Text object and an updated string value, diff the new value and
@@ -481,13 +480,13 @@ function mergeRichTextUpdate(
 		throw new Error( 'mergeCrdtBlocks: Y.Text is not attached to a Y.Doc' );
 	}
 
-	if ( ! localDoc || ! localYText ) {
+	if ( ! localDoc ) {
 		// Y.Text must be attached to a Y.Doc to be able to do operations on it.
 		// Create a temporary Y.Text attached to a local Y.Doc for delta computation.
 		localDoc = new Y.Doc();
-		localYText = localDoc.getText( 'temporary-text' );
 	}
 
+	const localYText = localDoc.getText( 'temporary-text' );
 	localYText.delete( 0, localYText.length );
 	localYText.insert( 0, updatedValue );
 
