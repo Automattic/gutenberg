@@ -144,8 +144,8 @@ function createNewYAttributeValue(
 ): Y.Text | unknown {
 	const isRichText = isRichTextAttribute( blockName, attributeName );
 
-	if ( isRichText && 'string' === typeof attributeValue ) {
-		return new Y.Text( attributeValue );
+	if ( isRichText ) {
+		return new Y.Text( attributeValue?.toString() ?? '' );
 	}
 
 	return attributeValue;
@@ -300,17 +300,19 @@ export function mergeCrdtBlocks(
 								attributeName
 							);
 
-							if ( isRichText ) {
+							if (
+								isRichText &&
+								'string' === typeof attributeValue
+							) {
 								// Rich text values are stored as persistent Y.Text instances.
 								// Update the value with a delta in place.
 								const blockYText = currentAttributes.get(
 									attributeName
 								) as Y.Text;
 
-								const updatedValue = attributeValue as string;
 								mergeRichTextUpdate(
 									blockYText,
-									updatedValue,
+									attributeValue,
 									lastSelection
 								);
 							} else {

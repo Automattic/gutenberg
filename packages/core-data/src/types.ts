@@ -3,8 +3,13 @@ export interface AnyFunction {
 }
 
 // Avoid a circular dependency with @wordpress/editor
-export type WPBlockSelection = {
+export interface WPBlockSelection {
 	clientId: string;
 	attributeKey: string;
 	offset: number;
-};
+}
+
+export interface WPSelection {
+	selectionEnd: WPBlockSelection;
+	selectionStart: WPBlockSelection;
+}

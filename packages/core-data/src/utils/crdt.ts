@@ -17,9 +17,12 @@ import { type CRDTDoc, CRDT_RECORD_MAP_KEY, Y } from '@wordpress/sync';
 import { mergeCrdtBlocks, type Block, type YBlock } from './crdt-blocks';
 import { type Post } from '../entity-types/post';
 import { type Type } from '../entity-types';
-import type { WPBlockSelection } from '../types';
+import type { WPBlockSelection, WPSelection } from '../types';
 
-type PostChanges = Partial< Post > & { blocks?: Block[] };
+type PostChanges = Partial< Post > & {
+	blocks?: Block[];
+	selection?: WPSelection;
+};
 
 let lastSelection: WPBlockSelection | null = null;
 
@@ -177,14 +180,7 @@ export function applyPostChangesToCRDTDoc(
 
 	// Update the lastSelection for CRDT use
 	if ( 'selection' in changes ) {
-		const selection = changes?.selection as
-			| {
-					selectionStart: WPBlockSelection;
-					selectionEnd: WPBlockSelection;
-			  }
-			| undefined;
-
-		lastSelection = selection?.selectionStart ?? null;
+		lastSelection = changes.selection?.selectionStart ?? null;
 	}
 }
 
