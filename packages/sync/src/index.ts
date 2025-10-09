@@ -18,6 +18,8 @@ export { connectIndexDb } from './connect-indexdb';
 export { createWebRTCConnection } from './create-webrtc-connection';
 export { SyncProvider } from './provider';
 export * from './types';
+export { default as Delta } from './quill-delta/Delta';
+export * from './quill-delta/Delta';
 
 declare global {
 	interface Window {

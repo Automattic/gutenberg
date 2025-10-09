@@ -4,21 +4,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as math from 'lib0/math';
 import * as fun from 'lib0/function';
-import Delta from 'quill-delta';
 
 /**
  * WordPress dependencies
  */
 import { RichTextData } from '@wordpress/rich-text';
-import { Y } from '@wordpress/sync';
+import { Y, Delta } from '@wordpress/sync';
 
 // @ts-expect-error - This is a TypeScript file, and @wordpress/blocks doesn't have a tsconfig.json?
 import { getBlockTypes } from '@wordpress/blocks';
-
-/**
- * Internal dependencies
- */
-import type { WPBlockSelection } from '../types';
 
 interface BlockAttributes {
 	[ key: string ]: unknown;
@@ -190,13 +184,11 @@ function createNewYBlock( block: Block ): YBlock {
  *
  * @param yblocks        The blocks in the local Y.Doc.
  * @param incomingBlocks Gutenberg blocks being synced.
- * @param lastSelection
  * @param _origin        The origin of the sync, either 'syncProvider' or 'gutenberg'.
  */
 export function mergeCrdtBlocks(
 	yblocks: Y.Array< YBlock >, // yblocks represent the blocks in the local Y.Doc
 	incomingBlocks: Block[], // incomingBlocks represent JSON blocks being synced, either from a peer or from the local editor
-	lastSelection: WPBlockSelection | null, // Last cursor position, used for hinting the diff algorithm
 	_origin: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): void {
 	// Ensure we are working with serializable block data.
@@ -312,8 +304,7 @@ export function mergeCrdtBlocks(
 
 								mergeRichTextUpdate(
 									blockYText,
-									attributeValue,
-									lastSelection
+									attributeValue
 								);
 							} else {
 								currentAttributes.set(
@@ -343,12 +334,7 @@ export function mergeCrdtBlocks(
 				case 'innerBlocks': {
 					// Recursively merge innerBlocks
 					const yInnerBlocks = yblock.get( key ) as Y.Array< YBlock >;
-					mergeCrdtBlocks(
-						yInnerBlocks,
-						value ?? [],
-						lastSelection,
-						_origin
-					);
+					mergeCrdtBlocks( yInnerBlocks, value ?? [], _origin );
 					break;
 				}
 
@@ -465,15 +451,10 @@ let localDoc: Y.Doc | null = null;
  * Given a Y.Text object and an updated string value, diff the new value and
  * apply the delta to the Y.Text.
  *
- * @param blockYText    The Y.Text to update.
- * @param updatedValue  The updated value.
- * @param lastSelection The last cursor position before this update, used to hint the diff algorithm.
+ * @param blockYText   The Y.Text to update.
+ * @param updatedValue The updated value.
  */
-function mergeRichTextUpdate(
-	blockYText: Y.Text,
-	updatedValue: string,
-	lastSelection: WPBlockSelection | null
-): void {
+function mergeRichTextUpdate( blockYText: Y.Text, updatedValue: string ): void {
 	const doc = blockYText.doc;
 
 	if ( ! doc ) {
@@ -493,10 +474,7 @@ function mergeRichTextUpdate(
 	const currentValueAsDelta = new Delta( blockYText.toDelta() );
 	const updatedValueAsDelta = new Delta( localYText.toDelta() );
 
-	const deltaDiff = currentValueAsDelta.diff(
-		updatedValueAsDelta,
-		lastSelection?.offset
-	);
+	const deltaDiff = currentValueAsDelta.diff( updatedValueAsDelta );
 
 	blockYText.applyDelta( deltaDiff.ops );
 }
