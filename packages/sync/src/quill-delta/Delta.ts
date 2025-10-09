@@ -1,5 +1,5 @@
 // File copied https://github.com/slab/delta/blob/main/src/Delta.ts, with fast-diff swapped out for 'diff',
-// and lodash.clonedeep and lodash.isequal swapped out for esm imports.
+// lodash.clonedeep and lodash.isequal swapped out for esm imports, and cursorPos dropped from diff.
 /* eslint-disable eslint-comments/disable-enable-pair */
 /* eslint-disable eslint-comments/no-unlimited-disable */
 /* eslint-disable */
