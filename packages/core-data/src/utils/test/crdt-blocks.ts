@@ -40,6 +40,12 @@ jest.mock( '@wordpress/rich-text', () => {
 	class MockRichTextData {
 		private text: string = '';
 
+		constructor( text?: string ) {
+			if ( text ) {
+				this.text = text;
+			}
+		}
+
 		toString() {
 			return this.text;
 		}
@@ -106,14 +112,33 @@ jest.mock( '@wordpress/blocks', () => ( {
  * Mock @wordpress/sync - Yjs implementation
  */
 jest.mock( '@wordpress/sync', () => {
+	class MockYDoc {
+		private texts: Map< string, any > = new Map();
+
+		getText( name: string ): any {
+			if ( ! this.texts.has( name ) ) {
+				this.texts.set( name, new MockYText( '', this ) );
+			}
+			return this.texts.get( name );
+		}
+	}
+
 	class MockYMap {
 		private data: Map< string, any > = new Map();
+		public doc: MockYDoc | null = null;
 
 		constructor( entries?: Array< [ string, any ] > ) {
+			// Create a doc for this map
+			this.doc = new MockYDoc();
+
 			if ( entries ) {
-				entries.forEach( ( [ key, value ] ) =>
-					this.data.set( key, value )
-				);
+				entries.forEach( ( [ key, value ] ) => {
+					// If the value is a Y.Text, attach the doc to it
+					if ( value instanceof MockYText && ! value.doc ) {
+						value.doc = this.doc;
+					}
+					this.data.set( key, value );
+				} );
 			}
 		}
 
@@ -122,6 +147,10 @@ jest.mock( '@wordpress/sync', () => {
 		}
 
 		set( key: string, value: any ): void {
+			// If the value is a Y.Text, attach the doc to it
+			if ( value instanceof MockYText && ! value.doc ) {
+				value.doc = this.doc;
+			}
 			this.data.set( key, value );
 		}
 
@@ -189,9 +218,15 @@ jest.mock( '@wordpress/sync', () => {
 
 	class MockYText {
 		private text: string = '';
+		public doc: MockYDoc | null = null;
 
-		constructor( text: string = '' ) {
+		constructor( text: string = '', doc: MockYDoc | null = null ) {
 			this.text = text;
+			this.doc = doc;
+		}
+
+		get length(): number {
+			return this.text.length;
 		}
 
 		toString(): string {
@@ -208,17 +243,82 @@ jest.mock( '@wordpress/sync', () => {
 				this.text.slice( 0, index ) + this.text.slice( index + length );
 		}
 
+		toDelta(): Array< {
+			insert?: string;
+			delete?: number;
+			retain?: number;
+		} > {
+			return [ { insert: this.text } ];
+		}
+
+		applyDelta(
+			ops: Array< { insert?: string; delete?: number; retain?: number } >
+		): void {
+			let index = 0;
+			for ( const op of ops ) {
+				if ( op.retain ) {
+					index += op.retain;
+				} else if ( op.insert ) {
+					this.insert( index, op.insert );
+					index += op.insert.length;
+				} else if ( op.delete ) {
+					this.delete( index, op.delete );
+				}
+			}
+		}
+
 		toJSON(): string {
 			return this.text;
 		}
 	}
 
+	class MockDelta {
+		public ops: Array< {
+			insert?: string;
+			delete?: number;
+			retain?: number;
+		} > = [];
+
+		constructor(
+			ops?: Array< { insert?: string; delete?: number; retain?: number } >
+		) {
+			this.ops = ops || [];
+		}
+
+		diff( other: MockDelta ): MockDelta {
+			// Simple diff implementation for testing
+			const currentText = this.ops
+				.map( ( op ) => op.insert || '' )
+				.join( '' );
+			const otherText = other.ops
+				.map( ( op ) => op.insert || '' )
+				.join( '' );
+
+			if ( currentText === otherText ) {
+				return new MockDelta( [] );
+			}
+
+			// Simple replace operation
+			const deltaOps = [];
+			if ( currentText.length > 0 ) {
+				deltaOps.push( { delete: currentText.length } );
+			}
+			if ( otherText.length > 0 ) {
+				deltaOps.push( { insert: otherText } );
+			}
+
+			return new MockDelta( deltaOps );
+		}
+	}
+
 	return {
 		Y: {
+			Doc: MockYDoc,
 			Map: MockYMap,
 			Array: MockYArray,
 			Text: MockYText,
 		},
+		Delta: MockDelta,
 	};
 } );
 
