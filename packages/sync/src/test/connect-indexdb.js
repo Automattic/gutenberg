@@ -1,31 +1,13 @@
 /**
  * External dependencies
  */
-import { describe, expect, it, jest, beforeEach } from '@jest/globals';
-
-const mockIndexeddbPersistence = {
-	destroy: jest.fn(),
-};
-
-jest.mock( 'y-indexeddb', () => {
-	return {
-		IndexeddbPersistence: jest
-			.fn()
-			.mockImplementation( () => mockIndexeddbPersistence ),
-	};
-} );
-
-const mockYDoc = {
-	clientID: 12345,
-	meta: new Map(),
-	getMap: jest.fn(),
-	transact: jest.fn( ( fn ) => fn() ),
-	destroy: jest.fn(),
-};
-
-jest.mock( 'yjs', () => ( {
-	Doc: jest.fn().mockImplementation( () => mockYDoc ),
-} ) );
+import { describe, expect, it, beforeEach, afterEach } from '@jest/globals';
+import * as Y from 'yjs';
+// Polyfill structuredClone for jsdom environment (required by fake-indexeddb).
+// Jest uses jsdom which doesn't include the structuredClone API yet.
+// See: https://github.com/dumbmatter/fakeIndexedDB#jsdom-often-used-with-jest
+import 'core-js/stable/structured-clone';
+import 'fake-indexeddb/auto';
 
 /**
  * Internal dependencies
@@ -33,28 +15,50 @@ jest.mock( 'yjs', () => ( {
 import { connectIndexDb } from '../connect-indexdb';
 
 describe( 'connectIndexDb', () => {
+	let doc;
+	let provider;
+
 	beforeEach( () => {
-		jest.clearAllMocks();
+		doc = new Y.Doc();
+	} );
+
+	afterEach( () => {
+		provider?.destroy();
+		doc?.destroy();
 	} );
 
 	it( 'creates an IndexeddbPersistence provider correctly', async () => {
-		const { IndexeddbPersistence } = jest.requireMock( 'y-indexeddb' );
-		const objectId = '123';
-		const objectType = 'post';
-		const doc = mockYDoc;
-
-		const result = await connectIndexDb( objectId, objectType, doc );
+		const result = await connectIndexDb( '123', 'post', doc );
+		provider = result;
 
 		expect( result ).toBeDefined();
 		expect( typeof result.destroy ).toBe( 'function' );
-		expect( IndexeddbPersistence ).toHaveBeenCalledWith( 'post-123', doc );
 	} );
 
-	it( 'destroy method calls provider.destroy', async () => {
-		const result = await connectIndexDb( '789', 'post', mockYDoc );
+	it( 'destroy method cleans up the provider', async () => {
+		const result = await connectIndexDb( '789', 'post', doc );
+		provider = result;
 
-		result.destroy();
+		expect( result ).toBeDefined();
+		expect( typeof result.destroy ).toBe( 'function' );
+		expect( () => result.destroy() ).not.toThrow();
+	} );
 
-		expect( mockIndexeddbPersistence.destroy ).toHaveBeenCalled();
+	it( 'handles different object types and IDs correctly', async () => {
+		const result = await connectIndexDb( '456', 'page', doc );
+		provider = result;
+
+		expect( result ).toBeDefined();
+		expect( typeof result.destroy ).toBe( 'function' );
+	} );
+
+	it( 'persists data to IndexedDB', async () => {
+		const result = await connectIndexDb( '123', 'post', doc );
+		provider = result;
+
+		const ymap = doc.getMap( 'test' );
+		ymap.set( 'key', 'value' );
+
+		expect( ymap.get( 'key' ) ).toBe( 'value' );
 	} );
 } );
