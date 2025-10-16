@@ -65,6 +65,13 @@ export function applyPostChangesToCRDTDoc(
 
 		switch ( key ) {
 			case 'blocks': {
+				// Account for the case where the content has some invalid blocks, and as a result
+				// the blocks are undefined but the content is not.
+				if ( changes.content && ! changes.blocks ) {
+					// Pull in the parsed blocks from the content, and use that as the new value.
+					newValue = parse( getRawValue( changes.content ) );
+				}
+
 				let currentBlocks = ymap.get( 'blocks' ) as Y.Array< YBlock >;
 
 				// Initialize.
