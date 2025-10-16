@@ -31,6 +31,7 @@ import {
 	NAVIGATION_POST_TYPE,
 } from '../../store/constants';
 import { unlock } from '../../lock-unlock';
+import { EditorsPresence } from '../editors-presence';
 
 const isBlockCommentExperimentEnabled =
 	window?.__experimentalEnableBlockComment;
@@ -148,6 +149,18 @@ function Header( {
 					variants={ toolbarVariations }
 					transition={ { type: 'tween' } }
 				>
+					<EditorsPresence.Slot>
+						{ ( fills ) =>
+							fills.map( ( fill, i ) => (
+								<div
+									className="editor-header__editor-presence"
+									key={ i }
+								>
+									{ fill }
+								</div>
+							) )
+						}
+					</EditorsPresence.Slot>
 					<DocumentBar title={ title } />
 				</motion.div>
 			) }
