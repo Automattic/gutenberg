@@ -68,8 +68,13 @@ export function applyPostChangesToCRDTDoc(
 				// Account for the case where the content has some invalid blocks, and as a result
 				// the blocks are undefined but the content is not.
 				if ( changes.content && ! changes.blocks ) {
-					// Pull in the parsed blocks from the content, and use that as the new value.
-					newValue = parse( getRawValue( changes.content ) );
+					try {
+						// Pull in the parsed blocks from the content, and use that as the new value.
+						newValue = parse( getRawValue( changes.content ) );
+					} catch ( e ) {
+						// No-op as one of the blocks is expected to be invalid.
+						// This ensures that neither the blocks, nor the content are overwritten.
+					}
 				}
 
 				let currentBlocks = ymap.get( 'blocks' ) as Y.Array< YBlock >;
