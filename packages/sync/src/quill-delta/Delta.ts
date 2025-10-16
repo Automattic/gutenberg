@@ -438,9 +438,12 @@ class Delta {
 	 * @param cursorAfterChange - The cursor position index after the change.
 	 * @returns A Delta that attempts to place insertions or deletions at the cursor position.
 	 */
-	diffWithCursor( other: Delta, cursorAfterChange: number ): Delta {
+	diffWithCursor( other: Delta, cursorAfterChange: number | null ): Delta {
 		if ( this.ops === other.ops ) {
 			return new Delta();
+		} else if ( cursorAfterChange === null ) {
+			// If no cursor position is provided, do a regular diff.
+			return this.diff( other );
 		}
 
 		const strings = [ this, other ].map( ( delta ) => {
@@ -460,8 +463,6 @@ class Delta {
 		} );
 
 		let diffs = diffChars( strings[ 0 ], strings[ 1 ] );
-		// console.log('diffChars:', JSON.stringify( diffs ) );
-
 		let lastDiffPosition = 0;
 		const adjustedDiffs: Change[] = [];
 
@@ -620,12 +621,7 @@ class Delta {
 			}
 		}
 
-		// console.log('adjustedDiffs:', JSON.stringify( adjustedDiffs ) );
-
 		diffs = adjustedDiffs;
-
-		// console.log('strings:', strings );
-		// console.log('cursor:', cursorAfterChange );
 
 		const retDelta = new Delta();
 		const thisIter = new OpIterator( this.ops );

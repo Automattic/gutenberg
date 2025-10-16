@@ -184,11 +184,13 @@ function createNewYBlock( block: Block ): YBlock {
  *
  * @param yblocks        The blocks in the local Y.Doc.
  * @param incomingBlocks Gutenberg blocks being synced.
+ * @param cursorPosition The position of the cursor after the change occurs.
  * @param _origin        The origin of the sync, either 'syncProvider' or 'gutenberg'.
  */
 export function mergeCrdtBlocks(
 	yblocks: Y.Array< YBlock >, // yblocks represent the blocks in the local Y.Doc
 	incomingBlocks: Block[], // incomingBlocks represent JSON blocks being synced, either from a peer or from the local editor
+	cursorPosition: number | null,
 	_origin: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): void {
 	// Ensure we are working with serializable block data.
@@ -304,7 +306,8 @@ export function mergeCrdtBlocks(
 
 								mergeRichTextUpdate(
 									blockYText,
-									attributeValue
+									attributeValue,
+									cursorPosition
 								);
 							} else {
 								currentAttributes.set(
@@ -334,7 +337,12 @@ export function mergeCrdtBlocks(
 				case 'innerBlocks': {
 					// Recursively merge innerBlocks
 					const yInnerBlocks = yblock.get( key ) as Y.Array< YBlock >;
-					mergeCrdtBlocks( yInnerBlocks, value ?? [], _origin );
+					mergeCrdtBlocks(
+						yInnerBlocks,
+						value ?? [],
+						cursorPosition,
+						_origin
+					);
 					break;
 				}
 
@@ -451,10 +459,15 @@ let localDoc: Y.Doc | null = null;
  * Given a Y.Text object and an updated string value, diff the new value and
  * apply the delta to the Y.Text.
  *
- * @param blockYText   The Y.Text to update.
- * @param updatedValue The updated value.
+ * @param blockYText     The Y.Text to update.
+ * @param updatedValue   The updated value.
+ * @param cursorPosition The position of the cursor after the change occurs.
  */
-function mergeRichTextUpdate( blockYText: Y.Text, updatedValue: string ): void {
+function mergeRichTextUpdate(
+	blockYText: Y.Text,
+	updatedValue: string,
+	cursorPosition: number | null
+): void {
 	const doc = blockYText.doc;
 
 	if ( ! doc ) {
@@ -473,8 +486,10 @@ function mergeRichTextUpdate( blockYText: Y.Text, updatedValue: string ): void {
 
 	const currentValueAsDelta = new Delta( blockYText.toDelta() );
 	const updatedValueAsDelta = new Delta( localYText.toDelta() );
-
-	const deltaDiff = currentValueAsDelta.diff( updatedValueAsDelta );
+	const deltaDiff = currentValueAsDelta.diffWithCursor(
+		updatedValueAsDelta,
+		cursorPosition
+	);
 
 	blockYText.applyDelta( deltaDiff.ops );
 }

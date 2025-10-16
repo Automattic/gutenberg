@@ -74,9 +74,19 @@ export function applyPostChangesToCRDTDoc(
 				// Block[] from local changes.
 				const newBlocks = ( newValue as PostChanges[ 'blocks' ] ) ?? [];
 
+				// Block changes from typing are bundled with a 'selection' update.
+				// Pass the resulting cursor position to the mergeCrdtBlocks function.
+				const cursorPosition =
+					changes.selection?.selectionStart?.offset ?? null;
+
 				// Merge blocks does not need `setValue` because it is operating on a
 				// Yjs type that is already in the Y.Doc.
-				mergeCrdtBlocks( currentBlocks, newBlocks, origin );
+				mergeCrdtBlocks(
+					currentBlocks,
+					newBlocks,
+					cursorPosition,
+					origin
+				);
 				break;
 			}
 
