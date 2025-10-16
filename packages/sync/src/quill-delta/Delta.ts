@@ -426,6 +426,245 @@ class Delta {
 				length -= opLength;
 			}
 		} );
+
+		return retDelta.chop();
+	}
+
+	/**
+	 * Given a Delta and a cursor position, do a diff and attempt to adjust
+	 * the diff to place insertions or deletions at the cursor position.
+	 *
+	 * @param other - The other Delta to diff against.
+	 * @param cursorAfterChange - The cursor position index after the change.
+	 * @returns A Delta that attempts to place insertions or deletions at the cursor position.
+	 */
+	diffWithCursor( other: Delta, cursorAfterChange: number ): Delta {
+		if ( this.ops === other.ops ) {
+			return new Delta();
+		}
+
+		const strings = [ this, other ].map( ( delta ) => {
+			return delta
+				.map( ( op ) => {
+					if ( op.insert != null ) {
+						return typeof op.insert === 'string'
+							? op.insert
+							: NULL_CHARACTER;
+					}
+					const prep = delta === other ? 'on' : 'with';
+					throw new Error(
+						'diff() called ' + prep + ' non-document'
+					);
+				} )
+				.join( '' );
+		} );
+
+		let diffs = diffChars( strings[ 0 ], strings[ 1 ] );
+		// console.log('diffChars:', JSON.stringify( diffs ) );
+
+		let lastDiffPosition = 0;
+		const adjustedDiffs: Change[] = [];
+
+		for ( let i = 0; i < diffs.length; i++ ) {
+			const diff = diffs[ i ];
+
+			const segmentStart = lastDiffPosition;
+			const segmentEnd = lastDiffPosition + diff.count;
+			const isCursorInSegment =
+				cursorAfterChange > segmentStart &&
+				cursorAfterChange <= segmentEnd;
+
+			const isUnchangedSegment = ! diff.added && ! diff.removed;
+			const isRemovalSegment = diff.removed && ! diff.added;
+
+			const nextDiff = diffs[ i + 1 ];
+			const isNextDiffAnInsert =
+				nextDiff && nextDiff.added && ! nextDiff.removed;
+
+			// If the position of the cursor is in an "unchanged" segment, but there's an insertion
+			// right after this section, then the insertion has likely been placed in
+			// the incorrect spot, and we can move the insertion to the position of the cursor.
+			if (
+				isUnchangedSegment &&
+				isCursorInSegment &&
+				isNextDiffAnInsert
+			) {
+				const nextDiffInsert = nextDiff.value;
+				const insertLength = nextDiffInsert.length;
+				const insertOffset =
+					cursorAfterChange - segmentStart - insertLength;
+
+				// Verify that the inserted text matches the text at the cursor position
+				const textAtCursor = diff.value.substring(
+					insertOffset,
+					insertOffset + nextDiffInsert.length
+				);
+				const isInsertMoveable = textAtCursor === nextDiffInsert;
+
+				// The insert text matches what's at the cursor position,
+				// so we can safely move the insertion to the cursor position.
+				if ( isInsertMoveable ) {
+					// Split the current segment at the cursor
+					const beforeCursor = diff.value.substring(
+						0,
+						insertOffset
+					);
+					const afterCursor = diff.value.substring( insertOffset );
+
+					// Add before cursor part (if not empty)
+					if ( beforeCursor.length > 0 ) {
+						adjustedDiffs.push( {
+							value: beforeCursor,
+							count: beforeCursor.length,
+							added: false,
+							removed: false,
+						} );
+					}
+
+					// Add the insertion in the middle
+					adjustedDiffs.push( nextDiff );
+
+					// Add after cursor part (if not empty)
+					if ( afterCursor.length > 0 ) {
+						adjustedDiffs.push( {
+							value: afterCursor,
+							count: afterCursor.length,
+							added: false,
+							removed: false,
+						} );
+					}
+
+					// Skip the next diff since we've already consumed it
+					i++;
+					lastDiffPosition = segmentEnd;
+					continue;
+				}
+			}
+
+			// Handle removals by checking if cursor was in the previous unchanged segment
+			if ( isRemovalSegment ) {
+				// Check if there's a preceding unchanged segment where cursor falls
+				// and the deleted characters match characters in that segment
+				const prevDiff = adjustedDiffs[ adjustedDiffs.length - 1 ];
+
+				if ( prevDiff && ! prevDiff.added && ! prevDiff.removed ) {
+					const prevSegmentStart = lastDiffPosition - prevDiff.count;
+					const prevSegmentEnd = lastDiffPosition;
+
+					// Check if cursor is within or at the end of the previous unchanged segment
+					if (
+						cursorAfterChange >= prevSegmentStart &&
+						cursorAfterChange < prevSegmentEnd
+					) {
+						// Check if the deleted characters match the text at the cursor position
+						const deletedChars = diff.value;
+						const deleteOffset =
+							cursorAfterChange - prevSegmentStart;
+						const textAtCursor = prevDiff.value.substring(
+							deleteOffset,
+							deleteOffset + deletedChars.length
+						);
+						const canBePlacedHere = textAtCursor === deletedChars;
+
+						if ( canBePlacedHere ) {
+							// Remove the previous unchanged segment from adjustedDiffs
+							adjustedDiffs.pop();
+
+							// Split the unchanged segment at the cursor and place deletion there
+							const beforeCursor = prevDiff.value.substring(
+								0,
+								deleteOffset
+							);
+							const atAndAfterCursor =
+								prevDiff.value.substring( deleteOffset );
+
+							// The deletion should consume characters starting at cursor
+							const deletionLength = diff.count;
+							const afterDeletion =
+								atAndAfterCursor.substring( deletionLength );
+
+							// Add before cursor part (if not empty)
+							if ( beforeCursor.length > 0 ) {
+								adjustedDiffs.push( {
+									value: beforeCursor,
+									count: beforeCursor.length,
+									added: false,
+									removed: false,
+								} );
+							}
+
+							// Add the deletion
+							adjustedDiffs.push( diff );
+
+							// Add after deletion part (if not empty)
+							if ( afterDeletion.length > 0 ) {
+								adjustedDiffs.push( {
+									value: afterDeletion,
+									count: afterDeletion.length,
+									added: false,
+									removed: false,
+								} );
+							}
+
+							lastDiffPosition += diff.count;
+							continue;
+						}
+					}
+				}
+			}
+
+			// Default: add diff as-is
+			adjustedDiffs.push( diff );
+			if ( ! diff.added ) {
+				lastDiffPosition += diff.count;
+			}
+		}
+
+		// console.log('adjustedDiffs:', JSON.stringify( adjustedDiffs ) );
+
+		diffs = adjustedDiffs;
+
+		// console.log('strings:', strings );
+		// console.log('cursor:', cursorAfterChange );
+
+		const retDelta = new Delta();
+		const thisIter = new OpIterator( this.ops );
+		const otherIter = new OpIterator( other.ops );
+		diffs.forEach( ( component: Change ) => {
+			let length = component.count;
+			while ( length > 0 ) {
+				let opLength = 0;
+				if ( component.added ) {
+					opLength = Math.min( otherIter.peekLength(), length );
+					retDelta.push( otherIter.next( opLength ) );
+				} else if ( component.removed ) {
+					opLength = Math.min( length, thisIter.peekLength() );
+					thisIter.next( opLength );
+					retDelta.delete( opLength );
+				} else {
+					opLength = Math.min(
+						thisIter.peekLength(),
+						otherIter.peekLength(),
+						length
+					);
+					const thisOp = thisIter.next( opLength );
+					const otherOp = otherIter.next( opLength );
+					if ( isEqual( thisOp.insert, otherOp.insert ) ) {
+						retDelta.retain(
+							opLength,
+							AttributeMap.diff(
+								thisOp.attributes,
+								otherOp.attributes
+							)
+						);
+					} else {
+						retDelta.push( otherOp ).delete( opLength );
+					}
+				}
+				length -= opLength;
+			}
+		} );
+
 		return retDelta.chop();
 	}
 
