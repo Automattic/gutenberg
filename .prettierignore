@@ -5,5 +5,6 @@ build-types
 packages/block-serialization-spec-parser/parser.js
 packages/edit-site/lib
 packages/react-native-editor/bundle
+packages/sync/src/quill-delta
 packages/url/src/test/fixtures
 vendor
