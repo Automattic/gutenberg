@@ -309,6 +309,13 @@ jest.mock( '@wordpress/sync', () => {
 
 			return new MockDelta( deltaOps );
 		}
+
+		diffWithCursor(
+			other: MockDelta,
+			_cursorAfterChange: number | null // eslint-disable-line @typescript-eslint/no-unused-vars
+		): MockDelta {
+			return this.diff( other );
+		}
 	}
 
 	return {
@@ -353,7 +360,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, incomingBlocks, 'gutenberg' );
+			mergeCrdtBlocks(
+				yblocks as any,
+				incomingBlocks,
+				null,
+				'gutenberg'
+			);
 
 			expect( yblocks.length ).toBe( 1 );
 			const block = yblocks.get( 0 ) as YBlock;
@@ -375,7 +387,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, initialBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, initialBlocks, null, 'gutenberg' );
 
 			const updatedBlocks: Block[] = [
 				{
@@ -386,7 +398,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, updatedBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, updatedBlocks, null, 'gutenberg' );
 
 			expect( yblocks.length ).toBe( 1 );
 			const block = yblocks.get( 0 ) as YBlock;
@@ -413,7 +425,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, initialBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, initialBlocks, null, 'gutenberg' );
 			expect( yblocks.length ).toBe( 2 );
 
 			const updatedBlocks: Block[] = [
@@ -425,7 +437,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, updatedBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, updatedBlocks, null, 'gutenberg' );
 
 			expect( yblocks.length ).toBe( 1 );
 			const block = yblocks.get( 0 ) as YBlock;
@@ -451,7 +463,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, blocksWithInner, 'gutenberg' );
+			mergeCrdtBlocks(
+				yblocks as any,
+				blocksWithInner,
+				null,
+				'gutenberg'
+			);
 
 			expect( yblocks.length ).toBe( 1 );
 			const block = yblocks.get( 0 ) as YBlock;
@@ -480,7 +497,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, galleryWithBlobs, 'gutenberg' );
+			mergeCrdtBlocks(
+				yblocks as any,
+				galleryWithBlobs,
+				null,
+				'gutenberg'
+			);
 
 			// Gallery block should not be synced because it has blob attributes
 			expect( yblocks.length ).toBe( 0 );
@@ -504,7 +526,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, galleryWithoutBlobs, 'gutenberg' );
+			mergeCrdtBlocks(
+				yblocks as any,
+				galleryWithoutBlobs,
+				null,
+				'gutenberg'
+			);
 
 			expect( yblocks.length ).toBe( 1 );
 			const block = yblocks.get( 0 ) as YBlock;
@@ -528,7 +555,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, initialBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, initialBlocks, null, 'gutenberg' );
 
 			// Reorder blocks
 			const reorderedBlocks: Block[] = [
@@ -546,7 +573,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, reorderedBlocks, 'gutenberg' );
+			mergeCrdtBlocks(
+				yblocks as any,
+				reorderedBlocks,
+				null,
+				'gutenberg'
+			);
 
 			expect( yblocks.length ).toBe( 2 );
 			const block0 = yblocks.get( 0 ) as YBlock;
@@ -572,7 +604,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, blocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, blocks, null, 'gutenberg' );
 
 			const block = yblocks.get( 0 ) as YBlock;
 			const contentAttr = (
@@ -601,6 +633,7 @@ describe( 'crdt-blocks', () => {
 			mergeCrdtBlocks(
 				yblocks as any,
 				blocksWithDuplicateIds,
+				null,
 				'gutenberg'
 			);
 
@@ -625,7 +658,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, initialBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, initialBlocks, null, 'gutenberg' );
 
 			const updatedBlocks: Block[] = [
 				{
@@ -637,7 +670,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, updatedBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, updatedBlocks, null, 'gutenberg' );
 
 			const block = yblocks.get( 0 ) as YBlock;
 			const attributes = block.get( 'attributes' ) as YBlockAttributes;
@@ -665,7 +698,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, initialBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, initialBlocks, null, 'gutenberg' );
 
 			// Update only the middle block
 			const updatedBlocks: Block[] = [
@@ -686,7 +719,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks as any, updatedBlocks, 'gutenberg' );
+			mergeCrdtBlocks( yblocks as any, updatedBlocks, null, 'gutenberg' );
 
 			expect( yblocks.length ).toBe( 3 );
 			const block = yblocks.get( 1 ) as YBlock;
