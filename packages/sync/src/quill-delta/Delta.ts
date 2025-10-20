@@ -844,10 +844,4 @@ class Delta {
 }
 
 export default Delta;
-
 export { Op, OpIterator, AttributeMap };
-
-if (typeof module === 'object') {
-  module.exports = Delta;
-  module.exports.default = Delta;
-}
