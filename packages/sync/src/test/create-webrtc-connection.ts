@@ -1,161 +1,107 @@
 /**
  * External dependencies
  */
-import { describe, expect, it, jest, beforeEach } from '@jest/globals';
-import type * as Y from 'yjs';
-
-const mockWebrtcProvider = {
-	destroy: jest.fn(),
-};
-
-jest.mock( '../webrtc-http-stream-signaling', () => {
-	return {
-		WebrtcProviderWithHttpSignaling: jest
-			.fn()
-			.mockImplementation( () => mockWebrtcProvider ),
-	};
-} );
-
-const mockYDoc = {
-	clientID: 12345,
-	meta: new Map(),
-	getMap: jest.fn(),
-	transact: jest.fn( ( fn: () => void ) => fn() ),
-	destroy: jest.fn(),
-};
-
-jest.mock( 'yjs', () => ( {
-	Doc: jest.fn().mockImplementation( () => mockYDoc ),
-} ) );
+import {
+	describe,
+	expect,
+	it,
+	jest,
+	beforeEach,
+	afterEach,
+} from '@jest/globals';
+import * as Y from 'yjs';
 
 /**
  * Internal dependencies
  */
-import {
-	createWebRTCConnection,
-	type WebRTCConnectionConfig,
-} from '../create-webrtc-connection';
+import { createWebRTCConnection } from '../create-webrtc-connection';
+import { WebrtcProviderWithHttpSignaling } from '../webrtc-http-stream-signaling';
+
+// Mock the WebRTC provider to avoid network connections in tests
+jest.mock( '../webrtc-http-stream-signaling', () => ( {
+	WebrtcProviderWithHttpSignaling: jest.fn(),
+} ) );
 
 describe( 'createWebRTCConnection', () => {
+	let doc: Y.Doc;
+	const mockProvider = WebrtcProviderWithHttpSignaling as jest.Mock< any >;
+
 	beforeEach( () => {
+		doc = new Y.Doc();
 		jest.clearAllMocks();
 	} );
 
-	describe( 'configuration', () => {
-		it( 'creates a connection function with signaling servers', () => {
-			const config: WebRTCConnectionConfig = {
-				signaling: [ 'ws://localhost:4444' ],
-			};
-
-			const connectDoc = createWebRTCConnection( config );
-
-			expect( typeof connectDoc ).toBe( 'function' );
-		} );
-
-		it( 'accepts password in configuration', () => {
-			const config: WebRTCConnectionConfig = {
-				signaling: [ 'ws://localhost:4444' ],
-				password: 'test-password',
-			};
-
-			const connectDoc = createWebRTCConnection( config );
-
-			expect( typeof connectDoc ).toBe( 'function' );
-		} );
-
-		it( 'accepts multiple signaling servers', () => {
-			const config: WebRTCConnectionConfig = {
-				signaling: [
-					'ws://localhost:4444',
-					'ws://localhost:5555',
-					'wss://example.com/signaling',
-				],
-			};
-
-			const connectDoc = createWebRTCConnection( config );
-
-			expect( typeof connectDoc ).toBe( 'function' );
-		} );
+	afterEach( () => {
+		doc?.destroy();
 	} );
 
-	describe( 'connection function', () => {
-		it( 'creates WebrtcProvider with correct room name', async () => {
-			const { WebrtcProviderWithHttpSignaling } = jest.requireMock(
-				'../webrtc-http-stream-signaling'
-			) as {
-				WebrtcProviderWithHttpSignaling: jest.Mock;
-			};
-
-			const config: WebRTCConnectionConfig = {
-				signaling: [ 'ws://localhost:4444' ],
-			};
-
-			const connectDoc = createWebRTCConnection( config );
-			await connectDoc( '123', 'post', mockYDoc as unknown as Y.Doc );
-
-			expect( WebrtcProviderWithHttpSignaling ).toHaveBeenCalledWith(
-				'post-123',
-				mockYDoc,
-				expect.objectContaining( {
-					signaling: [ 'ws://localhost:4444' ],
-				} )
-			);
+	it( 'creates a connection function', () => {
+		const connectDoc = createWebRTCConnection( {
+			signaling: [ 'ws://localhost:4444' ],
 		} );
 
-		it( 'passes password to WebrtcProvider', async () => {
-			const { WebrtcProviderWithHttpSignaling } = jest.requireMock(
-				'../webrtc-http-stream-signaling'
-			) as {
-				WebrtcProviderWithHttpSignaling: jest.Mock;
-			};
+		expect( typeof connectDoc ).toBe( 'function' );
+	} );
 
-			const config: WebRTCConnectionConfig = {
-				signaling: [ 'ws://localhost:4444' ],
-				password: 'secret-password',
-			};
-
-			const connectDoc = createWebRTCConnection( config );
-			await connectDoc( '456', 'page', mockYDoc as unknown as Y.Doc );
-
-			expect( WebrtcProviderWithHttpSignaling ).toHaveBeenCalledWith(
-				'page-456',
-				mockYDoc,
-				expect.objectContaining( {
-					signaling: [ 'ws://localhost:4444' ],
-					password: 'secret-password',
-				} )
-			);
+	it( 'creates WebrtcProvider with room name in format "objectType-objectId"', async () => {
+		const connectDoc = createWebRTCConnection( {
+			signaling: [ 'ws://localhost:4444' ],
 		} );
 
-		it( 'returns promise with destroy method', async () => {
-			const config: WebRTCConnectionConfig = {
+		await connectDoc( '789', 'post', doc );
+
+		expect( mockProvider ).toHaveBeenCalledWith(
+			'post-789',
+			doc,
+			expect.objectContaining( {
 				signaling: [ 'ws://localhost:4444' ],
-			};
+			} )
+		);
+	} );
 
-			const connectDoc = createWebRTCConnection( config );
-			const result = await connectDoc(
-				'789',
-				'post',
-				mockYDoc as unknown as Y.Doc
-			);
+	it( 'passes signaling servers to WebrtcProvider', async () => {
+		const signaling = [
+			'ws://localhost:4444',
+			'ws://localhost:5555',
+			'wss://example.com/signaling',
+		];
+		const connectDoc = createWebRTCConnection( { signaling } );
 
-			expect( result ).toBeDefined();
-			expect( typeof result.destroy ).toBe( 'function' );
+		await connectDoc( '100', 'page', doc );
+
+		expect( mockProvider ).toHaveBeenCalledWith(
+			'page-100',
+			doc,
+			expect.objectContaining( { signaling } )
+		);
+	} );
+
+	it( 'passes password to WebrtcProvider when provided', async () => {
+		const connectDoc = createWebRTCConnection( {
+			signaling: [ 'ws://localhost:4444' ],
+			password: 'test-password',
 		} );
 
-		it( 'destroy method is a no-op', async () => {
-			const config: WebRTCConnectionConfig = {
-				signaling: [ 'ws://localhost:4444' ],
-			};
+		await connectDoc( '456', 'post', doc );
 
-			const connectDoc = createWebRTCConnection( config );
-			const result = await connectDoc(
-				'100',
-				'post',
-				mockYDoc as unknown as Y.Doc
-			);
+		expect( mockProvider ).toHaveBeenCalledWith(
+			'post-456',
+			doc,
+			expect.objectContaining( {
+				password: 'test-password',
+			} )
+		);
+	} );
 
-			expect( () => result.destroy() ).not.toThrow();
+	it( 'returns promise with no-op destroy method', async () => {
+		const connectDoc = createWebRTCConnection( {
+			signaling: [ 'ws://localhost:4444' ],
 		} );
+
+		const result = await connectDoc( '789', 'post', doc );
+
+		expect( result ).toBeDefined();
+		expect( typeof result.destroy ).toBe( 'function' );
+		expect( () => result.destroy() ).not.toThrow();
 	} );
 } );
