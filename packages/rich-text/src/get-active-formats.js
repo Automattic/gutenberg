@@ -24,20 +24,31 @@ export function getActiveFormats( value, EMPTY_ACTIVE_FORMATS = [] ) {
 	if ( start === end ) {
 		// For a collapsed caret, it is possible to override the active formats.
 		if ( activeFormats ) {
-			return activeFormats;
+			// Filter out editor-only formats (like annotations) from activeFormats.
+			return activeFormats.filter(
+				( format ) => format.type !== 'core/annotation'
+			);
 		}
 
 		const formatsBefore = formats[ start - 1 ] || EMPTY_ACTIVE_FORMATS;
 		const formatsAfter = formats[ start ] || EMPTY_ACTIVE_FORMATS;
 
+		// Filter out editor-only formats (like annotations) when calculating from formats.
+		const filteredFormatsBefore = formatsBefore.filter(
+			( format ) => format.type !== 'core/annotation'
+		);
+		const filteredFormatsAfter = formatsAfter.filter(
+			( format ) => format.type !== 'core/annotation'
+		);
+
 		// By default, select the lowest amount of formats possible (which means
 		// the caret is positioned outside the format boundary). The user can
 		// then use arrow keys to define `activeFormats`.
-		if ( formatsBefore.length < formatsAfter.length ) {
-			return formatsBefore;
+		if ( filteredFormatsBefore.length < filteredFormatsAfter.length ) {
+			return filteredFormatsBefore;
 		}
 
-		return formatsAfter;
+		return filteredFormatsAfter;
 	}
 
 	// If there's no formats at the start index, there are not active formats.
@@ -47,9 +58,8 @@ export function getActiveFormats( value, EMPTY_ACTIVE_FORMATS = [] ) {
 
 	const selectedFormats = formats.slice( start, end );
 
-	// Clone the formats so we're not mutating the live value.
-	const _activeFormats = [ ...selectedFormats[ 0 ] ];
 	let i = selectedFormats.length;
+	let _activeFormats;
 
 	// For performance reasons, start from the end where it's much quicker to
 	// realise that there are no active formats.
@@ -62,6 +72,19 @@ export function getActiveFormats( value, EMPTY_ACTIVE_FORMATS = [] ) {
 			return EMPTY_ACTIVE_FORMATS;
 		}
 
+		// Filter out editor-only formats (like annotations) from formats at this index.
+		const filteredFormatsAtIndex = formatsAtIndex.filter(
+			( format ) => format.type !== 'core/annotation'
+		);
+
+		// Clone the formats so we're not mutating the live value.
+		// Filter out editor-only formats (like annotations) from the start.
+		// Assign only when we know we'll use it (after early return check).
+		if ( _activeFormats === undefined ) {
+			_activeFormats = ( selectedFormats[ 0 ] || [] ).filter(
+				( format ) => format.type !== 'core/annotation'
+			);
+		}
 		let ii = _activeFormats.length;
 
 		// Loop over the active formats and remove any that are not present at
@@ -70,7 +93,7 @@ export function getActiveFormats( value, EMPTY_ACTIVE_FORMATS = [] ) {
 			const format = _activeFormats[ ii ];
 
 			if (
-				! formatsAtIndex.find( ( _format ) =>
+				! filteredFormatsAtIndex.find( ( _format ) =>
 					isFormatEqual( format, _format )
 				)
 			) {

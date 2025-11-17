@@ -88,12 +88,18 @@ export default ( props ) => ( element ) => {
 		const currentValue = createRecord();
 		const { start, activeFormats: oldActiveFormats = [] } = record.current;
 
+		// Filter out editor-only formats (like annotations) from activeFormats,
+		// since they shouldn't be applied when typing.
+		const filteredActiveFormats = oldActiveFormats.filter(
+			( format ) => format.type !== 'core/annotation'
+		);
+
 		// Update the formats between the last and new caret position.
 		const change = updateFormats( {
 			value: currentValue,
 			start,
 			end: currentValue.start,
-			formats: oldActiveFormats,
+			formats: filteredActiveFormats,
 		} );
 
 		handleChange( change );
@@ -169,6 +175,7 @@ export default ( props ) => ( element ) => {
 		);
 
 		// Update the value with the new active formats.
+		// getActiveFormats already filters out editor-only formats like annotations.
 		newValue.activeFormats = newActiveFormats;
 
 		// It is important that the internal value is updated first,

@@ -156,13 +156,28 @@ export const annotation = {
 		};
 	},
 	__experimentalCreatePrepareEditableTree( { annotations } ) {
-		return ( formats, text ) => {
+		return ( formats, text, value ) => {
 			if ( annotations.length === 0 ) {
 				return formats;
 			}
 
 			let record = { formats, text };
+			// Preserve activeFormats when applying annotations so user formats
+			// (like bold) are not lost when annotations are added programmatically.
+			const originalActiveFormats = value?.activeFormats
+				? value.activeFormats.filter(
+						( format ) => format.type !== FORMAT_NAME
+				  )
+				: undefined;
+			if ( originalActiveFormats ) {
+				record.activeFormats = originalActiveFormats;
+			}
 			record = applyAnnotations( record, annotations );
+			// Restore original activeFormats after applying annotations, since
+			// annotations are editor-only formats and shouldn't be in activeFormats.
+			if ( originalActiveFormats ) {
+				record.activeFormats = originalActiveFormats;
+			}
 			return record.formats;
 		};
 	},

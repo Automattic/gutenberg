@@ -153,6 +153,12 @@ export function useRichText( {
 	function applyFromProps() {
 		// Get previous value before updating
 		const previousValue = _valueRef.current;
+		// Preserve activeFormats from current record before updating
+		const preservedActiveFormats = recordRef.current?.activeFormats
+			? recordRef.current.activeFormats.filter(
+					( format ) => format.type !== 'core/annotation'
+			  )
+			: undefined;
 
 		setRecordFromProps();
 
@@ -167,6 +173,20 @@ export function useRichText( {
 		const hasFocus = ref.current?.contains(
 			ref.current.ownerDocument.activeElement
 		);
+
+		// Preserve activeFormats when only formats changed (e.g., annotations added),
+		// not when content length changed or element doesn't have focus.
+		if (
+			preservedActiveFormats &&
+			! contentLengthChanged &&
+			hasFocus &&
+			recordRef.current.start === recordRef.current.end
+		) {
+			recordRef.current = {
+				...recordRef.current,
+				activeFormats: preservedActiveFormats,
+			};
+		}
 
 		// Skip re-applying the selection state when content changed from external source
 		// (e.g., typing in sidebar input changes canvas text)

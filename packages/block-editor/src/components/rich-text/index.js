@@ -376,7 +376,7 @@ export function RichTextWrapper(
 
 	function addInvisibleFormats( value ) {
 		return prepareHandlers.reduce(
-			( accumulator, fn ) => fn( accumulator, value.text ),
+			( accumulator, fn ) => fn( accumulator, value.text, value ),
 			value.formats
 		);
 	}
