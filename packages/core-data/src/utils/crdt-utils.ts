@@ -6,7 +6,7 @@ import { Y } from '@wordpress/sync';
 /**
  * Internal dependencies
  */
-import type { YBlock, YBlocks } from './crdt-blocks';
+import type { YBlock } from './crdt-blocks';
 import type { YPostRecord } from './crdt';
 import { CRDT_RECORD_MAP_KEY } from '../sync';
 
@@ -95,37 +95,11 @@ export function findBlockByClientIdInDoc(
 	ydoc: Y.Doc
 ): YBlock | null {
 	const ymap = getRootMap< YPostRecord >( ydoc, CRDT_RECORD_MAP_KEY );
-	const blocks = ymap.get( 'blocks' );
+	const blockProperties = ymap.get( 'blockProperties' );
 
-	if ( ! ( blocks instanceof Y.Array ) ) {
+	if ( ! ( blockProperties instanceof Y.Map ) ) {
 		return null;
 	}
 
-	return findBlockByClientIdInBlocks( blockId, blocks );
-}
-
-function findBlockByClientIdInBlocks(
-	blockId: string,
-	blocks: YBlocks
-): YBlock | null {
-	for ( const block of blocks ) {
-		if ( block.get( 'clientId' ) === blockId ) {
-			return block;
-		}
-
-		const innerBlocks = block.get( 'innerBlocks' );
-
-		if ( innerBlocks && innerBlocks.length > 0 ) {
-			const innerBlock = findBlockByClientIdInBlocks(
-				blockId,
-				innerBlocks
-			);
-
-			if ( innerBlock ) {
-				return innerBlock;
-			}
-		}
-	}
-
-	return null;
+	return blockProperties.get( blockId ) ?? null;
 }

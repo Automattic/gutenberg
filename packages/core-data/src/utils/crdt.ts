@@ -22,7 +22,7 @@ import {
 	mergeCrdtBlocks,
 	type Block,
 	type YBlock,
-	type YBlocks,
+	type YBlockProperties,
 } from './crdt-blocks';
 import { type Post } from '../entity-types/post';
 import { type Type } from '../entity-types';
@@ -52,7 +52,7 @@ export type PostChanges = Partial< Post > & {
 // A post record as represented in the CRDT document (Y.Map).
 export interface YPostRecord extends YMapRecord {
 	author: number;
-	blocks: YBlocks;
+	blockProperties: YBlockProperties;
 	categories: number[];
 	comment_status: string;
 	date: string | null;
@@ -61,6 +61,7 @@ export interface YPostRecord extends YMapRecord {
 	format: string;
 	meta: YMapWrap< YMapRecord >;
 	ping_status: string;
+	rootBlocks: Y.Array< string >;
 	slug: string;
 	status: string;
 	sticky: boolean;
@@ -93,6 +94,61 @@ const allowedPostProperties = new Set< string >( [
 const disallowedPostMetaKeys = new Set< string >( [
 	WORDPRESS_META_KEY_FOR_CRDT_DOC_PERSISTENCE,
 ] );
+
+/**
+ * Reconstruct the block tree from flat rootBlocks and blockProperties.
+ *
+ * @param rootBlocks      Array of root-level block clientIds
+ * @param blockProperties Map of clientId to block properties
+ * @return Reconstructed Block array
+ */
+function reconstructBlockTree(
+	rootBlocks: Y.Array< string >,
+	blockProperties: YBlockProperties
+): Block[] {
+	const reconstructBlock = ( clientId: string ): Block | null => {
+		const yblock = blockProperties.get( clientId );
+		if ( ! yblock ) {
+			return null;
+		}
+
+		const innerBlockIds = yblock.get( 'innerBlocks' );
+		const innerBlocks: Block[] = [];
+
+		if ( innerBlockIds && innerBlockIds.length > 0 ) {
+			for ( let i = 0; i < innerBlockIds.length; i++ ) {
+				const innerBlockId = innerBlockIds.get( i );
+				if ( innerBlockId ) {
+					const innerBlock = reconstructBlock( innerBlockId );
+					if ( innerBlock ) {
+						innerBlocks.push( innerBlock );
+					}
+				}
+			}
+		}
+
+		return {
+			clientId,
+			name: yblock.get( 'name' ) ?? '',
+			attributes: yblock.get( 'attributes' )?.toJSON() ?? {},
+			isValid: yblock.get( 'isValid' ),
+			innerBlocks,
+		};
+	};
+
+	const blocks: Block[] = [];
+	for ( let i = 0; i < rootBlocks.length; i++ ) {
+		const clientId = rootBlocks.get( i );
+		if ( clientId ) {
+			const block = reconstructBlock( clientId );
+			if ( block ) {
+				blocks.push( block );
+			}
+		}
+	}
+
+	return blocks;
+}
 
 /**
  * Given a set of local changes to a generic entity record, apply those changes
@@ -155,12 +211,17 @@ export function applyPostChangesToCRDTDoc(
 
 		switch ( key ) {
 			case 'blocks': {
-				let currentBlocks = ymap.get( key );
+				let rootBlocks = ymap.get( 'rootBlocks' );
+				let blockProperties = ymap.get( 'blockProperties' );
 
 				// Initialize.
-				if ( ! ( currentBlocks instanceof Y.Array ) ) {
-					currentBlocks = new Y.Array< YBlock >();
-					ymap.set( key, currentBlocks );
+				if ( ! ( rootBlocks instanceof Y.Array ) ) {
+					rootBlocks = new Y.Array< string >();
+					ymap.set( 'rootBlocks', rootBlocks );
+				}
+				if ( ! ( blockProperties instanceof Y.Map ) ) {
+					blockProperties = new Y.Map< YBlock >();
+					ymap.set( 'blockProperties', blockProperties );
 				}
 
 				// Block[] from local changes.
@@ -173,7 +234,12 @@ export function applyPostChangesToCRDTDoc(
 
 				// Merge blocks does not need `setValue` because it is operating on a
 				// Yjs type that is already in the Y.Doc.
-				mergeCrdtBlocks( currentBlocks, newBlocks, cursorPosition );
+				mergeCrdtBlocks(
+					rootBlocks,
+					blockProperties,
+					newBlocks,
+					cursorPosition
+				);
 				break;
 			}
 
@@ -266,7 +332,6 @@ export function applyPostChangesToCRDTDoc(
 function defaultGetChangesFromCRDTDoc( crdtDoc: CRDTDoc ): ObjectData {
 	return getRootMap( crdtDoc, CRDT_RECORD_MAP_KEY ).toJSON();
 }
-
 /**
  * Given a local Y.Doc that *may* contain changes from remote peers, compare
  * against the local record and determine if there are changes (edits) we want
@@ -317,12 +382,19 @@ export function getPostChangesFromCRDTDoc(
 						ydoc.meta?.get( CRDT_DOC_META_PERSISTENCE_KEY ) &&
 						editedRecord.content
 					) {
-						const blocks = ymap.get( 'blocks' ) as YBlocks;
-						return (
-							__unstableSerializeAndClean(
-								blocks.toJSON()
-							).trim() !== editedRecord.content.raw.trim()
-						);
+						const rootBlocks = ymap.get( 'rootBlocks' );
+						const blockProperties = ymap.get( 'blockProperties' );
+						if ( rootBlocks && blockProperties ) {
+							const reconstructedBlocks = reconstructBlockTree(
+								rootBlocks,
+								blockProperties
+							);
+							return (
+								__unstableSerializeAndClean(
+									reconstructedBlocks
+								).trim() !== editedRecord.content.raw.trim()
+							);
+						}
 					}
 
 					// The consumers of blocks have memoization that renders optimization
@@ -398,6 +470,18 @@ export function getPostChangesFromCRDTDoc(
 			...editedRecord.meta,
 			...allowedMetaChanges,
 		};
+	}
+
+	// Reconstruct blocks from flat structure if blocks were changed.
+	if ( changes.blocks ) {
+		const rootBlocks = ymap.get( 'rootBlocks' );
+		const blockProperties = ymap.get( 'blockProperties' );
+		if ( rootBlocks && blockProperties ) {
+			changes.blocks = reconstructBlockTree(
+				rootBlocks,
+				blockProperties
+			);
+		}
 	}
 
 	return changes;
