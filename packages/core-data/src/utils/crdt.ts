@@ -61,7 +61,7 @@ export interface YPostRecord extends YMapRecord {
 	format: string;
 	meta: YMapWrap< YMapRecord >;
 	ping_status: string;
-	rootBlocks: Y.Array< string >;
+	rootBlockIds: Y.Array< string >;
 	slug: string;
 	status: string;
 	sticky: boolean;
@@ -98,12 +98,12 @@ const disallowedPostMetaKeys = new Set< string >( [
 /**
  * Reconstruct the block tree from flat rootBlocks and blockProperties.
  *
- * @param rootBlocks      Array of root-level block clientIds
+ * @param rootBlockIds    Ordered array of root-level block clientIds.
  * @param blockProperties Map of clientId to block properties
  * @return Reconstructed Block array
  */
 function reconstructBlockTree(
-	rootBlocks: Y.Array< string >,
+	rootBlockIds: Y.Array< string >,
 	blockProperties: YBlockProperties
 ): Block[] {
 	const reconstructBlock = ( clientId: string ): Block | null => {
@@ -137,8 +137,8 @@ function reconstructBlockTree(
 	};
 
 	const blocks: Block[] = [];
-	for ( let i = 0; i < rootBlocks.length; i++ ) {
-		const clientId = rootBlocks.get( i );
+	for ( let i = 0; i < rootBlockIds.length; i++ ) {
+		const clientId = rootBlockIds.get( i );
 		if ( clientId ) {
 			const block = reconstructBlock( clientId );
 			if ( block ) {
@@ -211,13 +211,13 @@ export function applyPostChangesToCRDTDoc(
 
 		switch ( key ) {
 			case 'blocks': {
-				let rootBlocks = ymap.get( 'rootBlocks' );
+				let rootBlockIds = ymap.get( 'rootBlockIds' );
 				let blockProperties = ymap.get( 'blockProperties' );
 
 				// Initialize.
-				if ( ! ( rootBlocks instanceof Y.Array ) ) {
-					rootBlocks = new Y.Array< string >();
-					ymap.set( 'rootBlocks', rootBlocks );
+				if ( ! ( rootBlockIds instanceof Y.Array ) ) {
+					rootBlockIds = new Y.Array< string >();
+					ymap.set( 'rootBlockIds', rootBlockIds );
 				}
 				if ( ! ( blockProperties instanceof Y.Map ) ) {
 					blockProperties = new Y.Map< YBlock >();
@@ -235,7 +235,7 @@ export function applyPostChangesToCRDTDoc(
 				// Merge blocks does not need `setValue` because it is operating on a
 				// Yjs type that is already in the Y.Doc.
 				mergeCrdtBlocks(
-					rootBlocks,
+					rootBlockIds,
 					blockProperties,
 					newBlocks,
 					cursorPosition
@@ -382,11 +382,11 @@ export function getPostChangesFromCRDTDoc(
 						ydoc.meta?.get( CRDT_DOC_META_PERSISTENCE_KEY ) &&
 						editedRecord.content
 					) {
-						const rootBlocks = ymap.get( 'rootBlocks' );
+						const rootBlockIds = ymap.get( 'rootBlockIds' );
 						const blockProperties = ymap.get( 'blockProperties' );
-						if ( rootBlocks && blockProperties ) {
+						if ( rootBlockIds && blockProperties ) {
 							const reconstructedBlocks = reconstructBlockTree(
-								rootBlocks,
+								rootBlockIds,
 								blockProperties
 							);
 							return (
@@ -474,11 +474,11 @@ export function getPostChangesFromCRDTDoc(
 
 	// Reconstruct blocks from flat structure if blocks were changed.
 	if ( changes.blocks ) {
-		const rootBlocks = ymap.get( 'rootBlocks' );
+		const rootBlockIds = ymap.get( 'rootBlockIds' );
 		const blockProperties = ymap.get( 'blockProperties' );
-		if ( rootBlocks && blockProperties ) {
+		if ( rootBlockIds && blockProperties ) {
 			changes.blocks = reconstructBlockTree(
-				rootBlocks,
+				rootBlockIds,
 				blockProperties
 			);
 		}
