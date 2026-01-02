@@ -217,13 +217,13 @@ export function mergeCrdtBlocks(
  * Internal function to merge blocks without any top-level checks.
  * Called recursively for innerBlocks.
  *
- * @param rootBlockIds    Root-level block clientIds.
+ * @param blockIds        Array of block clientIds to merge.
  * @param blockProperties Map of clientId to block properties.
  * @param incomingBlocks  Incoming blocks from Gutenberg to merge.
  * @param cursorPosition  The position of the cursor after the change occurs.
  */
 function mergeCrdtBlocksInternal(
-	rootBlockIds: Y.Array< string >,
+	blockIds: Y.Array< string >,
 	blockProperties: YBlockProperties,
 	incomingBlocks: Block[],
 	cursorPosition: number | null
@@ -235,7 +235,7 @@ function mergeCrdtBlocksInternal(
 	// @link https://github.com/WordPress/gutenberg/pull/68483
 	const numOfCommonEntries = Math.min(
 		incomingBlocks.length ?? 0,
-		rootBlockIds.length
+		blockIds.length
 	);
 
 	let left = 0;
@@ -247,7 +247,7 @@ function mergeCrdtBlocksInternal(
 		left < numOfCommonEntries &&
 		areBlocksEqualByClientId(
 			incomingBlocks[ left ],
-			rootBlockIds.get( left ) ?? '',
+			blockIds.get( left ) ?? '',
 			blockProperties
 		);
 		left++
@@ -261,7 +261,7 @@ function mergeCrdtBlocksInternal(
 		right < numOfCommonEntries - left &&
 		areBlocksEqualByClientId(
 			incomingBlocks[ incomingBlocks.length - right - 1 ],
-			rootBlockIds.get( rootBlockIds.length - right - 1 ) ?? '',
+			blockIds.get( blockIds.length - right - 1 ) ?? '',
 			blockProperties
 		);
 		right++
@@ -272,17 +272,17 @@ function mergeCrdtBlocksInternal(
 	const numOfUpdatesNeeded = numOfCommonEntries - left - right;
 	const numOfInsertionsNeeded = Math.max(
 		0,
-		incomingBlocks.length - rootBlockIds.length
+		incomingBlocks.length - blockIds.length
 	);
 	const numOfDeletionsNeeded = Math.max(
 		0,
-		rootBlockIds.length - incomingBlocks.length
+		blockIds.length - incomingBlocks.length
 	);
 
 	// updates
 	for ( let i = 0; i < numOfUpdatesNeeded; i++, left++ ) {
 		const block = incomingBlocks[ left ];
-		const clientId = rootBlockIds.get( left );
+		const clientId = blockIds.get( left );
 		if ( ! clientId ) {
 			continue;
 		}
@@ -395,7 +395,7 @@ function mergeCrdtBlocksInternal(
 					}
 
 					mergeCrdtBlocksInternal(
-						rootBlockIds,
+						yInnerBlockIds,
 						blockProperties,
 						value ?? [],
 						cursorPosition
@@ -420,12 +420,12 @@ function mergeCrdtBlocksInternal(
 	// deletes
 	const deletedIds: string[] = [];
 	for ( let i = 0; i < numOfDeletionsNeeded; i++ ) {
-		const deletedId = rootBlockIds.get( left + i );
+		const deletedId = blockIds.get( left + i );
 		if ( deletedId ) {
 			deletedIds.push( deletedId );
 		}
 	}
-	rootBlockIds.delete( left, numOfDeletionsNeeded );
+	blockIds.delete( left, numOfDeletionsNeeded );
 
 	// Remove deleted blocks and their descendants from blockProperties
 	deletedIds.forEach( ( id ) =>
@@ -446,7 +446,7 @@ function mergeCrdtBlocksInternal(
 		blockProperties.set( clientId, yblock );
 
 		// Insert clientId into the array
-		rootBlockIds.insert( left, [ clientId ] );
+		blockIds.insert( left, [ clientId ] );
 	}
 }
 

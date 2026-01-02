@@ -1189,6 +1189,7 @@ describe( 'crdt-blocks', () => {
 		it( 'handles rich-text updates with cursor at start', () => {
 			const blocks: Block[] = [
 				{
+					clientId: 'block-1',
 					name: 'core/paragraph',
 					attributes: { content: 'Hello World' },
 					innerBlocks: [],
@@ -1199,6 +1200,7 @@ describe( 'crdt-blocks', () => {
 
 			const updatedBlocks: Block[] = [
 				{
+					clientId: 'block-1',
 					name: 'core/paragraph',
 					attributes: { content: 'XHello World' },
 					innerBlocks: [],
@@ -1218,6 +1220,7 @@ describe( 'crdt-blocks', () => {
 		it( 'handles rich-text updates with cursor at end', () => {
 			const blocks: Block[] = [
 				{
+					clientId: 'block-2',
 					name: 'core/paragraph',
 					attributes: { content: 'Hello World' },
 					innerBlocks: [],
@@ -1228,6 +1231,7 @@ describe( 'crdt-blocks', () => {
 
 			const updatedBlocks: Block[] = [
 				{
+					clientId: 'block-2',
 					name: 'core/paragraph',
 					attributes: { content: 'Hello World!' },
 					innerBlocks: [],
@@ -1247,6 +1251,7 @@ describe( 'crdt-blocks', () => {
 		it( 'handles rich-text updates with cursor beyond text length', () => {
 			const blocks: Block[] = [
 				{
+					clientId: 'block-3',
 					name: 'core/paragraph',
 					attributes: { content: 'Hello' },
 					innerBlocks: [],
@@ -1257,6 +1262,7 @@ describe( 'crdt-blocks', () => {
 
 			const updatedBlocks: Block[] = [
 				{
+					clientId: 'block-3',
 					name: 'core/paragraph',
 					attributes: { content: 'Hello World' },
 					innerBlocks: [],
@@ -1327,6 +1333,7 @@ describe( 'crdt-blocks', () => {
 		it( 'deletes rich-text attributes when removed from block', () => {
 			const blocksWithRichText: Block[] = [
 				{
+					clientId: 'block-4',
 					name: 'core/paragraph',
 					attributes: {
 						content: 'Rich text content',
