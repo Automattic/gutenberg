@@ -35,19 +35,37 @@ import {
 	mergeCrdtBlocks,
 	type Block,
 	type YBlock,
-	type YBlocks,
+	type YBlockProperties,
 	type YBlockAttributes,
 } from '../crdt-blocks';
 
 describe( 'crdt-blocks', () => {
 	let doc: Y.Doc;
-	let yblocks: Y.Array< YBlock >;
+	let rootBlockIds: Y.Array< string >;
+	let blockProperties: YBlockProperties;
 
 	beforeEach( () => {
 		doc = new Y.Doc();
-		yblocks = doc.getArray< YBlock >();
+		rootBlockIds = doc.getArray< string >( 'rootBlockIds' );
+		blockProperties = doc.getMap< YBlock >( 'blockProperties' );
 		jest.clearAllMocks();
 	} );
+
+	// Helper to get a block by ID with a defined type.
+	const getBlockById = ( blockId: string | undefined ): YBlock => {
+		if ( typeof blockId !== 'string' ) {
+			expect( blockId ).toBe( "a string (but it wasn't)" );
+			// TypeScript needs a return, but expect will fail the test
+			return {} as YBlock;
+		}
+		const block = blockProperties.get( blockId );
+		if ( typeof block === 'undefined' ) {
+			expect( block ).toBeDefined();
+			// TypeScript needs a return, but expect will fail the test
+			return {} as YBlock;
+		}
+		return block;
+	};
 
 	afterEach( () => {
 		doc.destroy();
@@ -63,10 +81,16 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, incomingBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				incomingBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const block = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			expect( block.get( 'name' ) ).toBe( 'core/paragraph' );
 			const content = (
 				block.get( 'attributes' ) as YBlockAttributes
@@ -84,7 +108,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, initialBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				initialBlocks,
+				null
+			);
 
 			const updatedBlocks: Block[] = [
 				{
@@ -95,10 +124,16 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				updatedBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const block = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const content = (
 				block.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -121,8 +156,13 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, initialBlocks, null );
-			expect( yblocks.length ).toBe( 2 );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				initialBlocks,
+				null
+			);
+			expect( rootBlockIds.length ).toBe( 2 );
 
 			const updatedBlocks: Block[] = [
 				{
@@ -133,10 +173,16 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				updatedBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const block = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const content = (
 				block.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -158,13 +204,22 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocksWithInner, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				blocksWithInner,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const block = yblocks.get( 0 );
-			const innerBlocks = block.get( 'innerBlocks' ) as YBlocks;
-			expect( innerBlocks.length ).toBe( 1 );
-			const innerBlock = innerBlocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
+			const innerBlockIds = block.get(
+				'innerBlocks'
+			) as Y.Array< string >;
+			expect( innerBlockIds.length ).toBe( 1 );
+			const innerBlockId = innerBlockIds.get( 0 );
+			const innerBlock = getBlockById( innerBlockId );
 			expect( innerBlock.get( 'name' ) ).toBe( 'core/paragraph' );
 		} );
 
@@ -186,10 +241,15 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, galleryWithBlobs, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				galleryWithBlobs,
+				null
+			);
 
 			// Gallery block should not be synced because it has blob attributes
-			expect( yblocks.length ).toBe( 0 );
+			expect( rootBlockIds.length ).toBe( 0 );
 		} );
 
 		it( 'syncs gallery blocks without blob attributes', () => {
@@ -209,10 +269,16 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, galleryWithoutBlobs, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				galleryWithoutBlobs,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const block = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			expect( block.get( 'name' ) ).toBe( 'core/gallery' );
 		} );
 
@@ -225,10 +291,10 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocks, null );
 
 			// Freeform block should not be synced because it has no content attribute.
-			expect( yblocks.length ).toBe( 0 );
+			expect( rootBlockIds.length ).toBe( 0 );
 		} );
 
 		it( 'syncs freeform blocks with defined content attribute', () => {
@@ -249,21 +315,25 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocks, null );
 
-			expect( yblocks.length ).toBe( 2 );
-			expect( yblocks.get( 0 ).get( 'name' ) ).toBe( 'core/freeform' );
+			expect( rootBlockIds.length ).toBe( 2 );
+			const blockId0 = rootBlockIds.get( 0 );
+			const block0 = getBlockById( blockId0 );
+			expect( block0.get( 'name' ) ).toBe( 'core/freeform' );
 			expect(
-				(
-					yblocks.get( 0 ).get( 'attributes' ) as YBlockAttributes
-				 ).get( 'content' )
+				( block0.get( 'attributes' ) as YBlockAttributes ).get(
+					'content'
+				)
 			).toBe( 'Some freeform content' );
 
-			expect( yblocks.get( 1 ).get( 'name' ) ).toBe( 'core/freeform' );
+			const blockId1 = rootBlockIds.get( 1 );
+			const block1 = getBlockById( blockId1 );
+			expect( block1.get( 'name' ) ).toBe( 'core/freeform' );
 			expect(
-				(
-					yblocks.get( 1 ).get( 'attributes' ) as YBlockAttributes
-				 ).get( 'content' )
+				( block1.get( 'attributes' ) as YBlockAttributes ).get(
+					'content'
+				)
 			).toBe( '' );
 		} );
 
@@ -283,7 +353,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, initialBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				initialBlocks,
+				null
+			);
 
 			// Reorder blocks
 			const reorderedBlocks: Block[] = [
@@ -301,16 +376,23 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, reorderedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				reorderedBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 2 );
-			const block0 = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 2 );
+			const blockId0 = rootBlockIds.get( 0 );
+			const block0 = getBlockById( blockId0 );
 			const content0 = (
 				block0.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
 			expect( content0.toString() ).toBe( 'Second' );
 
-			const block1 = yblocks.get( 1 );
+			const blockId1 = rootBlockIds.get( 1 );
+			const block1 = getBlockById( blockId1 );
 			const content1 = (
 				block1.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -326,9 +408,10 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocks, null );
 
-			const block = yblocks.get( 0 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const contentAttr = (
 				block.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -345,9 +428,10 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocks, null );
 
-			const block = yblocks.get( 0 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const contentAttr = (
 				block.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' );
@@ -363,11 +447,17 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				updatedBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
+			expect( rootBlockIds.length ).toBe( 1 );
 
-			const updatedBlock = yblocks.get( 0 );
+			const updatedBlockId = rootBlockIds.get( 0 );
+			const updatedBlock = getBlockById( updatedBlockId );
 			const updatedContentAttr = (
 				updatedBlock.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -392,11 +482,18 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocksWithDuplicateIds, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				blocksWithDuplicateIds,
+				null
+			);
 
-			const block0 = yblocks.get( 0 );
+			const blockId0 = rootBlockIds.get( 0 );
+			const block0 = getBlockById( blockId0 );
 			const clientId1 = block0.get( 'clientId' );
-			const block1 = yblocks.get( 1 );
+			const blockId1 = rootBlockIds.get( 1 );
+			const block1 = getBlockById( blockId1 );
 			const clientId2 = block1.get( 'clientId' );
 
 			expect( clientId1 ).not.toBe( clientId2 );
@@ -414,7 +511,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, initialBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				initialBlocks,
+				null
+			);
 
 			const updatedBlocks: Block[] = [
 				{
@@ -426,9 +528,15 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				updatedBlocks,
+				null
+			);
 
-			const block = yblocks.get( 0 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const attributes = block.get( 'attributes' ) as YBlockAttributes;
 			expect( attributes.has( 'level' ) ).toBe( false );
 			expect( attributes.has( 'content' ) ).toBe( true );
@@ -453,7 +561,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, initialBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				initialBlocks,
+				null
+			);
 
 			// Update only the middle block
 			const updatedBlocks: Block[] = [
@@ -474,10 +587,16 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				updatedBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 3 );
-			const block = yblocks.get( 1 );
+			expect( rootBlockIds.length ).toBe( 3 );
+			const blockId = rootBlockIds.get( 1 );
+			const block = getBlockById( blockId );
 			const content = (
 				block.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -494,7 +613,12 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, initialBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				initialBlocks,
+				null
+			);
 
 			// Now add the content attribute (rich-text)
 			const updatedBlocks: Block[] = [
@@ -508,10 +632,16 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				updatedBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const block = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const attributes = block.get( 'attributes' ) as YBlockAttributes;
 
 			// The content attribute should now exist
@@ -534,9 +664,15 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, freeformBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				freeformBlocks,
+				null
+			);
 
-			const block1 = yblocks.get( 0 );
+			const blockId1 = rootBlockIds.get( 0 );
+			const block1 = getBlockById( blockId1 );
 			const content1 = (
 				block1.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' );
@@ -554,10 +690,16 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, paragraphBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				paragraphBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const block2 = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId2 = rootBlockIds.get( 0 );
+			const block2 = getBlockById( blockId2 );
 			const content2 = (
 				block2.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -590,15 +732,25 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, nestedGallery, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				nestedGallery,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const groupBlock = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId = rootBlockIds.get( 0 );
+			const groupBlock = getBlockById( blockId );
 			expect( groupBlock.get( 'name' ) ).toBe( 'core/group' );
 
-			const innerBlocks = groupBlock.get( 'innerBlocks' ) as YBlocks;
-			expect( innerBlocks.length ).toBe( 1 );
-			expect( innerBlocks.get( 0 ).get( 'name' ) ).toBe( 'core/gallery' );
+			const innerBlockIds = groupBlock.get(
+				'innerBlocks'
+			) as Y.Array< string >;
+			expect( innerBlockIds.length ).toBe( 1 );
+			const innerBlockId = innerBlockIds.get( 0 );
+			const innerBlock = getBlockById( innerBlockId );
+			expect( innerBlock.get( 'name' ) ).toBe( 'core/gallery' );
 		} );
 
 		it( 'handles complex block reordering', () => {
@@ -635,8 +787,13 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, initialBlocks, null );
-			expect( yblocks.length ).toBe( 5 );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				initialBlocks,
+				null
+			);
+			expect( rootBlockIds.length ).toBe( 5 );
 
 			// Reorder: [A, B, C, D, E] -> [C, A, E, B, D]
 			const reorderedBlocks: Block[] = [
@@ -672,12 +829,18 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, reorderedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				reorderedBlocks,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 5 );
+			expect( rootBlockIds.length ).toBe( 5 );
 			const contents = [ 'C', 'A', 'E', 'B', 'D' ];
 			contents.forEach( ( expectedContent, i ) => {
-				const block = yblocks.get( i );
+				const blockId = rootBlockIds.get( i );
+				const block = getBlockById( blockId );
 				const content = (
 					block.get( 'attributes' ) as YBlockAttributes
 				 ).get( 'content' ) as Y.Text;
@@ -696,8 +859,8 @@ describe( 'crdt-blocks', () => {
 				} )
 			);
 
-			mergeCrdtBlocks( yblocks, manyBlocks, null );
-			expect( yblocks.length ).toBe( 10 );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, manyBlocks, null );
+			expect( rootBlockIds.length ).toBe( 10 );
 
 			const fewBlocks: Block[] = [
 				{
@@ -714,15 +877,19 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, fewBlocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, fewBlocks, null );
 
-			expect( yblocks.length ).toBe( 2 );
+			expect( rootBlockIds.length ).toBe( 2 );
+			const blockId0 = rootBlockIds.get( 0 );
+			const block0 = getBlockById( blockId0 );
 			const content0 = (
-				yblocks.get( 0 ).get( 'attributes' ) as YBlockAttributes
+				block0.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
 			expect( content0.toString() ).toBe( 'Block 0' );
+			const blockId1 = rootBlockIds.get( 1 );
+			const block1 = getBlockById( blockId1 );
 			const content1 = (
-				yblocks.get( 1 ).get( 'attributes' ) as YBlockAttributes
+				block1.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
 			expect( content1.toString() ).toBe( 'Block 9' );
 		} );
@@ -743,8 +910,8 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, fewBlocks, null );
-			expect( yblocks.length ).toBe( 2 );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, fewBlocks, null );
+			expect( rootBlockIds.length ).toBe( 2 );
 
 			const manyBlocks: Block[] = Array.from(
 				{ length: 10 },
@@ -756,11 +923,12 @@ describe( 'crdt-blocks', () => {
 				} )
 			);
 
-			mergeCrdtBlocks( yblocks, manyBlocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, manyBlocks, null );
 
-			expect( yblocks.length ).toBe( 10 );
+			expect( rootBlockIds.length ).toBe( 10 );
 			manyBlocks.forEach( ( block, i ) => {
-				const yblock = yblocks.get( i );
+				const blockId = rootBlockIds.get( i );
+				const yblock = getBlockById( blockId );
 				const content = (
 					yblock.get( 'attributes' ) as YBlockAttributes
 				 ).get( 'content' ) as Y.Text;
@@ -787,8 +955,8 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocksA, null );
-			expect( yblocks.length ).toBe( 3 );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocksA, null );
+			expect( rootBlockIds.length ).toBe( 3 );
 
 			const blocksB: Block[] = [
 				{
@@ -808,12 +976,14 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocksB, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocksB, null );
 
-			expect( yblocks.length ).toBe( 3 );
+			expect( rootBlockIds.length ).toBe( 3 );
 			[ 'B1', 'B2', 'B3' ].forEach( ( expected, i ) => {
+				const blockId = rootBlockIds.get( i );
+				const block = getBlockById( blockId );
 				const content = (
-					yblocks.get( i ).get( 'attributes' ) as YBlockAttributes
+					block.get( 'attributes' ) as YBlockAttributes
 				 ).get( 'content' ) as Y.Text;
 				expect( content.toString() ).toBe( expected );
 			} );
@@ -828,11 +998,11 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocks, null );
-			expect( yblocks.length ).toBe( 1 );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocks, null );
+			expect( rootBlockIds.length ).toBe( 1 );
 
-			mergeCrdtBlocks( yblocks, [], null );
-			expect( yblocks.length ).toBe( 0 );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, [], null );
+			expect( rootBlockIds.length ).toBe( 0 );
 		} );
 
 		it( 'handles deeply nested blocks', () => {
@@ -870,18 +1040,25 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, deeplyNested, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				deeplyNested,
+				null
+			);
 
 			// Navigate to the deepest block
-			let current: YBlocks | YBlock = yblocks;
+			let currentIds: Y.Array< string > = rootBlockIds;
 			for ( let i = 0; i < 4; i++ ) {
-				expect( ( current as YBlocks ).length ).toBe( 1 );
-				current = ( current as YBlocks ).get( 0 );
-				current = ( current as YBlock ).get( 'innerBlocks' ) as YBlocks;
+				expect( currentIds.length ).toBe( 1 );
+				const blockId = currentIds.get( 0 );
+				const block = getBlockById( blockId );
+				currentIds = block.get( 'innerBlocks' ) as Y.Array< string >;
 			}
 
-			expect( ( current as YBlocks ).length ).toBe( 1 );
-			const deepBlock = ( current as YBlocks ).get( 0 );
+			expect( currentIds.length ).toBe( 1 );
+			const deepBlockId = currentIds.get( 0 );
+			const deepBlock = getBlockById( deepBlockId );
 			const content = (
 				deepBlock.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -922,15 +1099,17 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedDeep, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, updatedDeep, null );
 
 			// Verify update propagated
-			current = yblocks;
+			currentIds = rootBlockIds;
 			for ( let i = 0; i < 4; i++ ) {
-				current = ( current as YBlocks ).get( 0 );
-				current = ( current as YBlock ).get( 'innerBlocks' ) as YBlocks;
+				const blockId = currentIds.get( 0 );
+				const block = getBlockById( blockId );
+				currentIds = block.get( 'innerBlocks' ) as Y.Array< string >;
 			}
-			const updatedBlock = ( current as YBlocks ).get( 0 );
+			const updatedBlockId = currentIds.get( 0 );
+			const updatedBlock = getBlockById( updatedBlockId );
 			const updatedContent = (
 				updatedBlock.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -954,14 +1133,23 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocksWithCrossLevelDuplicates, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				blocksWithCrossLevelDuplicates,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const rootBlock = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const rootBlockId = rootBlockIds.get( 0 );
+			const rootBlock = getBlockById( rootBlockId );
 			const rootClientId = rootBlock.get( 'clientId' );
 
-			const innerBlocks = rootBlock.get( 'innerBlocks' ) as YBlocks;
-			const nestedBlock = innerBlocks.get( 0 );
+			const innerBlockIds = rootBlock.get(
+				'innerBlocks'
+			) as Y.Array< string >;
+			const nestedBlockId = innerBlockIds.get( 0 );
+			const nestedBlock = getBlockById( nestedBlockId );
 			const nestedClientId = nestedBlock.get( 'clientId' );
 
 			// Cross-level duplicates should be removed
@@ -983,10 +1171,16 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocksWithNullAttrs, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				blocksWithNullAttrs,
+				null
+			);
 
-			expect( yblocks.length ).toBe( 1 );
-			const block = yblocks.get( 0 );
+			expect( rootBlockIds.length ).toBe( 1 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const attributes = block.get( 'attributes' ) as YBlockAttributes;
 			expect( attributes.get( 'content' ) ).toBeInstanceOf( Y.Text );
 			expect( attributes.get( 'customAttr' ) ).toBe( null );
@@ -1001,7 +1195,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocks, null );
 
 			const updatedBlocks: Block[] = [
 				{
@@ -1011,9 +1205,10 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, 0 );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, updatedBlocks, 0 );
 
-			const block = yblocks.get( 0 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const content = (
 				block.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -1029,7 +1224,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocks, null );
 
 			const updatedBlocks: Block[] = [
 				{
@@ -1039,9 +1234,10 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, 11 );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, updatedBlocks, 11 );
 
-			const block = yblocks.get( 0 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const content = (
 				block.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -1057,7 +1253,7 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocks, null );
+			mergeCrdtBlocks( rootBlockIds, blockProperties, blocks, null );
 
 			const updatedBlocks: Block[] = [
 				{
@@ -1067,9 +1263,15 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, 999 );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				updatedBlocks,
+				999
+			);
 
-			const block = yblocks.get( 0 );
+			const blockId = rootBlockIds.get( 0 );
+			const block = getBlockById( blockId );
 			const content = (
 				block.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
@@ -1088,9 +1290,15 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, initialBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				initialBlocks,
+				null
+			);
 
-			const block1 = yblocks.get( 0 );
+			const blockId1 = rootBlockIds.get( 0 );
+			const block1 = getBlockById( blockId1 );
 			expect( block1.get( 'isValid' ) ).toBe( true );
 			expect( block1.get( 'originalContent' ) ).toBe( 'Original' );
 
@@ -1103,9 +1311,15 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, updatedBlocks, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				updatedBlocks,
+				null
+			);
 
-			const block2 = yblocks.get( 0 );
+			const blockId2 = rootBlockIds.get( 0 );
+			const block2 = getBlockById( blockId2 );
 			expect( block2.has( 'isValid' ) ).toBe( false );
 			expect( block2.has( 'originalContent' ) ).toBe( false );
 		} );
@@ -1122,9 +1336,15 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocksWithRichText, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				blocksWithRichText,
+				null
+			);
 
-			const block1 = yblocks.get( 0 );
+			const blockId1 = rootBlockIds.get( 0 );
+			const block1 = getBlockById( blockId1 );
 			const attrs1 = block1.get( 'attributes' ) as YBlockAttributes;
 			expect( attrs1.has( 'content' ) ).toBe( true );
 			expect( attrs1.has( 'caption' ) ).toBe( true );
@@ -1139,9 +1359,15 @@ describe( 'crdt-blocks', () => {
 				},
 			];
 
-			mergeCrdtBlocks( yblocks, blocksWithoutCaption, null );
+			mergeCrdtBlocks(
+				rootBlockIds,
+				blockProperties,
+				blocksWithoutCaption,
+				null
+			);
 
-			const block2 = yblocks.get( 0 );
+			const blockId2 = rootBlockIds.get( 0 );
+			const block2 = getBlockById( blockId2 );
 			const attrs2 = block2.get( 'attributes' ) as YBlockAttributes;
 			expect( attrs2.has( 'content' ) ).toBe( true );
 			expect( attrs2.has( 'caption' ) ).toBe( false );
