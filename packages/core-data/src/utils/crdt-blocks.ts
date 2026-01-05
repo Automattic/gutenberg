@@ -41,7 +41,7 @@ export interface Block {
 interface YBlockRecord extends YMapRecord {
 	attributes: YBlockAttributes;
 	clientId: string;
-	innerBlocks: Y.Array< string >;
+	innerBlockIds: Y.Array< string >;
 	isValid?: boolean;
 	originalContent?: string;
 	name: string;
@@ -95,7 +95,7 @@ function areBlocksEqual( gblock: Block, yblock: YBlock ): boolean {
 		clientId: null,
 	};
 	const inners = gblock.innerBlocks || [];
-	const yinners = yblock.get( 'innerBlocks' );
+	const yinners = yblock.get( 'innerBlockIds' );
 
 	// Check if innerBlocks count matches
 	if ( inners.length !== yinners?.length ) {
@@ -196,21 +196,13 @@ export function mergeCrdtBlocks(
 	}
 	const allBlocks = serializableBlocksCache.get( incomingBlocks ) ?? [];
 
-	// Ensure we skip blocks that we don't want to sync at the moment
-	const blocksToSync = allBlocks.filter( ( block ) =>
-		shouldBlockBeSynced( block )
-	);
-
 	// Perform the merge
 	mergeCrdtBlocksInternal(
 		rootBlockIds,
 		blockProperties,
-		blocksToSync,
+		allBlocks,
 		cursorPosition
 	);
-
-	// Remove duplicate clientIds across all nesting levels (at top level)
-	removeDuplicateClientIds( rootBlockIds, blockProperties );
 }
 
 /**
@@ -228,13 +220,18 @@ function mergeCrdtBlocksInternal(
 	incomingBlocks: Block[],
 	cursorPosition: number | null
 ): void {
+	// Ensure we skip blocks that we don't want to sync at the moment
+	const blocksToSync = incomingBlocks.filter( ( block ) =>
+		shouldBlockBeSynced( block )
+	);
+
 	// This is a rudimentary diff implementation similar to the y-prosemirror diffing
-	// approach, adapted to work with flat block structure.
+	// approach, adapted to work with a flat block structure.
 	//
 	// @credit Kevin Jahns (dmonad)
 	// @link https://github.com/WordPress/gutenberg/pull/68483
 	const numOfCommonEntries = Math.min(
-		incomingBlocks.length ?? 0,
+		blocksToSync.length ?? 0,
 		blockIds.length
 	);
 
@@ -246,7 +243,7 @@ function mergeCrdtBlocksInternal(
 		;
 		left < numOfCommonEntries &&
 		areBlocksEqualByClientId(
-			incomingBlocks[ left ],
+			blocksToSync[ left ],
 			blockIds.get( left ) ?? '',
 			blockProperties
 		);
@@ -260,7 +257,7 @@ function mergeCrdtBlocksInternal(
 		;
 		right < numOfCommonEntries - left &&
 		areBlocksEqualByClientId(
-			incomingBlocks[ incomingBlocks.length - right - 1 ],
+			blocksToSync[ blocksToSync.length - right - 1 ],
 			blockIds.get( blockIds.length - right - 1 ) ?? '',
 			blockProperties
 		);
@@ -272,26 +269,31 @@ function mergeCrdtBlocksInternal(
 	const numOfUpdatesNeeded = numOfCommonEntries - left - right;
 	const numOfInsertionsNeeded = Math.max(
 		0,
-		incomingBlocks.length - blockIds.length
+		blocksToSync.length - blockIds.length
 	);
 	const numOfDeletionsNeeded = Math.max(
 		0,
-		blockIds.length - incomingBlocks.length
+		blockIds.length - blocksToSync.length
 	);
 
 	// updates
 	for ( let i = 0; i < numOfUpdatesNeeded; i++, left++ ) {
-		const block = incomingBlocks[ left ];
+		const block = blocksToSync[ left ];
 		const clientId = blockIds.get( left );
 		if ( ! clientId ) {
 			continue;
 		}
 
-		let yblock = blockProperties.get( clientId );
+		const yblock = blockProperties.get( clientId );
 		if ( ! yblock ) {
 			// Block doesn't exist in properties, create it
-			yblock = createFlatYBlock( block, blockProperties, cursorPosition );
-			blockProperties.set( clientId, yblock );
+			const { clientId: newClientId } = insertFlatBlock(
+				block,
+				blockProperties,
+				cursorPosition
+			);
+
+			blockIds.insert( left, [ newClientId ] );
 			continue;
 		}
 
@@ -312,15 +314,6 @@ function mergeCrdtBlocksInternal(
 
 					Object.entries( value ).forEach(
 						( [ attributeName, attributeValue ] ) => {
-							if (
-								fastDeepEqual(
-									currentAttributes?.get( attributeName ),
-									attributeValue
-								)
-							) {
-								return;
-							}
-
 							const currentAttribute =
 								currentAttributes.get( attributeName );
 							const isRichText = isRichTextAttribute(
@@ -335,6 +328,16 @@ function mergeCrdtBlocksInternal(
 									) ) ||
 								( ! isRichText &&
 									currentAttribute instanceof Y.Text );
+
+							if (
+								! attributeHasTypeChange &&
+								fastDeepEqual(
+									currentAttribute,
+									attributeValue
+								)
+							) {
+								return;
+							}
 
 							// Skip update if values are equal and type stays the same
 							if (
@@ -351,7 +354,8 @@ function mergeCrdtBlocksInternal(
 								isRichText &&
 								'string' === typeof attributeValue &&
 								currentAttributes.has( attributeName ) &&
-								currentAttribute instanceof Y.Text
+								currentAttribute instanceof Y.Text &&
+								! attributeHasTypeChange
 							) {
 								// Rich text values are stored as persistent Y.Text instances.
 								// Update the value with a delta in place.
@@ -361,6 +365,7 @@ function mergeCrdtBlocksInternal(
 									cursorPosition
 								);
 							} else {
+								// Either the attribute type changed or it's a new value
 								currentAttributes.set(
 									attributeName,
 									createNewYAttributeValue(
@@ -387,11 +392,11 @@ function mergeCrdtBlocksInternal(
 
 				case 'innerBlocks': {
 					// Recursively merge innerBlocks
-					let yInnerBlockIds = yblock.get( 'innerBlocks' );
+					let yInnerBlockIds = yblock.get( 'innerBlockIds' );
 
 					if ( ! ( yInnerBlockIds instanceof Y.Array ) ) {
 						yInnerBlockIds = new Y.Array< string >();
-						yblock.set( 'innerBlocks', yInnerBlockIds );
+						yblock.set( 'innerBlockIds', yInnerBlockIds );
 					}
 
 					mergeCrdtBlocksInternal(
@@ -410,9 +415,20 @@ function mergeCrdtBlocksInternal(
 			}
 		} );
 
-		yblock.forEach( ( _v, k ) => {
-			if ( ! block.hasOwnProperty( k ) ) {
-				yblock.delete( k );
+		const yBlockToBlockPropertyMap = {
+			// innerBlocks is innerBlockIds in a YBlock
+			innerBlockIds: 'innerBlocks',
+		};
+
+		yblock.forEach( ( _v, yBlockKey ) => {
+			if ( yBlockKey in yBlockToBlockPropertyMap ) {
+				const blockPropertyName = yBlockToBlockPropertyMap[ yBlockKey ];
+
+				if ( ! block.hasOwnProperty( blockPropertyName ) ) {
+					yblock.delete( yBlockKey );
+				}
+			} else if ( ! block.hasOwnProperty( yBlockKey ) ) {
+				yblock.delete( yBlockKey );
 			}
 		} );
 	}
@@ -434,16 +450,14 @@ function mergeCrdtBlocksInternal(
 
 	// inserts
 	for ( let i = 0; i < numOfInsertionsNeeded; i++, left++ ) {
-		const block = incomingBlocks[ left ];
-		const clientId = block.clientId ?? uuidv4();
+		const block = blocksToSync[ left ];
 
 		// Create flat block and all its descendants
-		const yblock = createFlatYBlock(
+		const { clientId } = insertFlatBlock(
 			block,
 			blockProperties,
 			cursorPosition
 		);
-		blockProperties.set( clientId, yblock );
 
 		// Insert clientId into the array
 		blockIds.insert( left, [ clientId ] );
@@ -451,82 +465,54 @@ function mergeCrdtBlocksInternal(
 }
 
 /**
- * Recursively remove duplicate clientIds from blocks and their innerBlocks.
- *
- * @param blockIds        Array of block clientIds to check.
- * @param blockProperties Map of clientId to block properties.
- * @param knownClientIds  Set of clientIds seen so far.
- */
-function removeDuplicateClientIds(
-	blockIds: Y.Array< string >,
-	blockProperties: YBlockProperties,
-	knownClientIds: Set< string > = new Set()
-): void {
-	for ( let j = 0; j < blockIds.length; j++ ) {
-		let clientId = blockIds.get( j );
-		const yblock = clientId ? blockProperties.get( clientId ) : false;
-
-		if ( clientId && yblock ) {
-			if ( knownClientIds.has( clientId ) ) {
-				clientId = uuidv4();
-				yblock.set( 'clientId', clientId );
-			}
-
-			knownClientIds.add( clientId );
-		}
-
-		// Recursively check innerBlocks client IDs
-		const yInnerBlocks = yblock ? yblock.get( 'innerBlocks' ) : false;
-
-		if ( yInnerBlocks && yInnerBlocks instanceof Y.Array ) {
-			removeDuplicateClientIds(
-				yInnerBlocks,
-				blockProperties,
-				knownClientIds
-			);
-		}
-	}
-}
-
-/**
  * Create a flat YBlock from a Block, including all descendants.
- * @param block
- * @param blockProperties
- * @param cursorPosition
+ * Handles duplicate clientIds by generating new UUIDs when needed.
+ * Returns the clientId separately, as yBlock.get('clientId') will not work
+ * until the block is set as a decendent in a YDoc.
+ *
+ * @param block           The block to create.
+ * @param blockProperties Map of clientId to block properties.
+ * @param cursorPosition  The position of the cursor after the change occurs.
  */
-function createFlatYBlock(
+function insertFlatBlock(
 	block: Block,
 	blockProperties: YBlockProperties,
 	cursorPosition: number | null
-): YBlock {
-	const clientId = block.clientId ?? uuidv4();
+): { clientId: string; yBlock: YBlock } {
+	let clientId = block.clientId;
+
+	if ( ! clientId || blockProperties.has( clientId ) ) {
+		clientId = uuidv4();
+	}
+
+	const innerBlockIds = new Y.Array< string >();
+
+	const yBlock = createYMap< YBlockRecord >( {
+		clientId,
+		name: block.name,
+		attributes: createNewYAttributeMap( block.name, block.attributes ),
+		innerBlockIds,
+		isValid: block.isValid,
+		originalContent: block.originalContent,
+	} );
+
+	blockProperties.set( clientId, yBlock );
 
 	// Create innerBlocks array of clientIds
-	const innerBlockIds = new Y.Array< string >();
-	if ( block.innerBlocks && block.innerBlocks.length > 0 ) {
-		const ids: string[] = [];
+	if ( block.innerBlocks.length > 0 ) {
 		block.innerBlocks.forEach( ( innerBlock ) => {
-			const innerId = innerBlock.clientId ?? uuidv4();
-			ids.push( innerId );
 			// Recursively create inner blocks
-			const innerYBlock = createFlatYBlock(
+			const { clientId: innerClientId } = insertFlatBlock(
 				innerBlock,
 				blockProperties,
 				cursorPosition
 			);
-			blockProperties.set( innerId, innerYBlock );
+
+			innerBlockIds.push( [ innerClientId ] );
 		} );
-		innerBlockIds.insert( 0, ids );
 	}
 
-	return createYMap< YBlockRecord >( {
-		clientId,
-		name: block.name,
-		attributes: createNewYAttributeMap( block.name, block.attributes ),
-		innerBlocks: innerBlockIds,
-		isValid: block.isValid,
-		originalContent: block.originalContent,
-	} );
+	return { clientId, yBlock };
 }
 
 /**
@@ -544,7 +530,7 @@ function deleteBlockAndDescendants(
 	}
 
 	// Recursively delete inner blocks
-	const innerBlockIds = yblock.get( 'innerBlocks' );
+	const innerBlockIds = yblock.get( 'innerBlockIds' );
 	if ( innerBlockIds && innerBlockIds.length > 0 ) {
 		for ( let i = 0; i < innerBlockIds.length; i++ ) {
 			const innerId = innerBlockIds.get( i );

@@ -214,8 +214,9 @@ describe( 'crdt-blocks', () => {
 			expect( rootBlockIds.length ).toBe( 1 );
 			const blockId = rootBlockIds.get( 0 );
 			const block = getBlockById( blockId );
+
 			const innerBlockIds = block.get(
-				'innerBlocks'
+				'innerBlockIds'
 			) as Y.Array< string >;
 			expect( innerBlockIds.length ).toBe( 1 );
 			const innerBlockId = innerBlockIds.get( 0 );
@@ -745,7 +746,7 @@ describe( 'crdt-blocks', () => {
 			expect( groupBlock.get( 'name' ) ).toBe( 'core/group' );
 
 			const innerBlockIds = groupBlock.get(
-				'innerBlocks'
+				'innerBlockIds'
 			) as Y.Array< string >;
 			expect( innerBlockIds.length ).toBe( 1 );
 			const innerBlockId = innerBlockIds.get( 0 );
@@ -1053,7 +1054,7 @@ describe( 'crdt-blocks', () => {
 				expect( currentIds.length ).toBe( 1 );
 				const blockId = currentIds.get( 0 );
 				const block = getBlockById( blockId );
-				currentIds = block.get( 'innerBlocks' ) as Y.Array< string >;
+				currentIds = block.get( 'innerBlockIds' ) as Y.Array< string >;
 			}
 
 			expect( currentIds.length ).toBe( 1 );
@@ -1106,13 +1107,15 @@ describe( 'crdt-blocks', () => {
 			for ( let i = 0; i < 4; i++ ) {
 				const blockId = currentIds.get( 0 );
 				const block = getBlockById( blockId );
-				currentIds = block.get( 'innerBlocks' ) as Y.Array< string >;
+				currentIds = block.get( 'innerBlockIds' ) as Y.Array< string >;
 			}
+
 			const updatedBlockId = currentIds.get( 0 );
 			const updatedBlock = getBlockById( updatedBlockId );
 			const updatedContent = (
 				updatedBlock.get( 'attributes' ) as YBlockAttributes
 			 ).get( 'content' ) as Y.Text;
+
 			expect( updatedContent.toString() ).toBe( 'Updated deep' );
 		} );
 
@@ -1146,7 +1149,7 @@ describe( 'crdt-blocks', () => {
 			const rootClientId = rootBlock.get( 'clientId' );
 
 			const innerBlockIds = rootBlock.get(
-				'innerBlocks'
+				'innerBlockIds'
 			) as Y.Array< string >;
 			const nestedBlockId = innerBlockIds.get( 0 );
 			const nestedBlock = getBlockById( nestedBlockId );

@@ -112,7 +112,7 @@ function reconstructBlockTree(
 			return null;
 		}
 
-		const innerBlockIds = yblock.get( 'innerBlocks' );
+		const innerBlockIds = yblock.get( 'innerBlockIds' );
 		const innerBlocks: Block[] = [];
 
 		if ( innerBlockIds && innerBlockIds.length > 0 ) {
