@@ -323,45 +323,20 @@ function mergeCrdtBlocksInternal(
 								currentAttribute
 							);
 
-							// Skip update if values are equal and type stays the same
-							if (
-								isExpectedType &&
-								fastDeepEqual(
+							const isAttributeChanged =
+								! isExpectedType ||
+								! fastDeepEqual(
 									currentAttribute,
 									attributeValue
-								)
-							) {
-								return;
-							}
-
-							const isRichText = isRichTextAttribute(
-								block.name,
-								attributeName
-							);
-
-							if (
-								isRichText &&
-								'string' === typeof attributeValue &&
-								currentAttributes.has( attributeName ) &&
-								currentAttribute instanceof Y.Text &&
-								isExpectedType
-							) {
-								// Rich text values are stored as persistent Y.Text instances.
-								// Update the value with a delta in place.
-								mergeRichTextUpdate(
-									currentAttribute,
-									attributeValue,
-									cursorPosition
 								);
-							} else {
-								// Either the attribute type changed or it's a new value
-								currentAttributes.set(
+
+							if ( isAttributeChanged ) {
+								updateYBlockAttribute(
+									block.name,
 									attributeName,
-									createNewYAttributeValue(
-										block.name,
-										attributeName,
-										attributeValue
-									)
+									attributeValue,
+									currentAttributes,
+									cursorPosition
 								);
 							}
 						}
@@ -564,6 +539,42 @@ function shouldBlockBeSynced( block: Block ): boolean {
 
 	// Allow all other blocks to be synced.
 	return true;
+}
+
+/**
+ * Update a YBlock attribute, accounting for rich text attributes.
+ *
+ * @param blockName         The name of the block, e.g. 'core/paragraph'.
+ * @param attributeName     The name of the attribute, e.g. 'content'.
+ * @param attributeValue    The new value of the attribute.
+ * @param currentAttributes The current attributes of the block.
+ * @param cursorPosition    The position of the cursor after the change occurs.
+ */
+function updateYBlockAttribute(
+	blockName: string,
+	attributeName: string,
+	attributeValue: unknown,
+	currentAttributes: YBlockAttributes,
+	cursorPosition: number | null
+): void {
+	const isRichText = isRichTextAttribute( blockName, attributeName );
+	const currentAttribute = currentAttributes.get( attributeName );
+
+	if (
+		isRichText &&
+		'string' === typeof attributeValue &&
+		currentAttributes.has( attributeName ) &&
+		currentAttribute instanceof Y.Text
+	) {
+		// Rich text values are stored as persistent Y.Text instances.
+		// Update the value with a delta in place.
+		mergeRichTextUpdate( currentAttribute, attributeValue, cursorPosition );
+	} else {
+		currentAttributes.set(
+			attributeName,
+			createNewYAttributeValue( blockName, attributeName, attributeValue )
+		);
+	}
 }
 
 // Cache attributes for all block types.
