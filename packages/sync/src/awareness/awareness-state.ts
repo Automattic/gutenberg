@@ -240,6 +240,17 @@ export abstract class AwarenessState<
 	}
 
 	/**
+	 * Get the most recently computed list of EnhancedState that would have been sent to subscribers.
+	 * This reflects the last snapshot passed in updateSubscribers.
+	 * @return An array of EnhancedState< State >.
+	 */
+	public getLastSnapshot(): EnhancedState< State >[] {
+		return Array.from(
+			this.previousSnapshot.values()
+		) as unknown as EnhancedState< State >[];
+	}
+
+	/**
 	 * Update all subscribed listeners with the latest awareness state.
 	 * @param forceUpdate - Whether to force an update.
 	 */

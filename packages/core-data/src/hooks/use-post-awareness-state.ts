@@ -7,9 +7,13 @@ import { useEffect, useState } from '@wordpress/element';
  * Internal dependencies
  */
 import { getSyncManager } from '../sync';
-import type { PostEditorAwarenessState as ActiveUser } from '../awareness/types';
+import type {
+	PostEditorAwarenessState as ActiveUser,
+	PostEditorAwarenessState,
+} from '../awareness/types';
 import type { SelectionCursor } from '../types';
 import type { PostEditorAwareness } from '../awareness/post-editor-awareness';
+import { type EnhancedState } from '@wordpress/sync';
 
 interface AwarenessState {
 	activeUsers: ActiveUser[];
@@ -23,43 +27,70 @@ const defaultState: AwarenessState = {
 	isCurrentUserDisconnected: false,
 };
 
+function getPostEditorAwarenessState(
+	postId: number | null,
+	postType: string | null,
+	awareness?: PostEditorAwareness,
+	newState?: EnhancedState< PostEditorAwarenessState >[]
+): PostEditorAwarenessState {
+	if ( ! postId || ! postType || ! awareness ) {
+		return defaultState;
+	}
+
+	const stateSnapshot =
+		typeof newState !== 'undefined'
+			? newState
+			: awareness.getLastSnapshot();
+
+	if ( ! stateSnapshot ) {
+		return defaultState;
+	}
+
+	return {
+		activeUsers: stateSnapshot,
+		getAbsolutePositionIndex: ( selection: SelectionCursor ) =>
+			awareness.getAbsolutePositionIndex( selection ),
+		isCurrentUserDisconnected:
+			stateSnapshot.find( ( user ) => user.isMe )?.isConnected === false,
+	};
+}
+
 function usePostEditorAwarenessState(
 	postId: number | null,
 	postType: string | null
-): AwarenessState {
-	const [ state, setState ] = useState< AwarenessState >( defaultState );
+): PostEditorAwarenessState {
+	const [ state, setState ] = useState< PostEditorAwarenessState >( () => {
+		const awareness =
+			! postId || ! postType
+				? undefined
+				: ( getSyncManager()?.getAwareness(
+						`postType/${ postType }`,
+						postId.toString()
+				  ) as unknown as PostEditorAwareness | undefined );
+
+		return getPostEditorAwarenessState( postId, postType, awareness );
+	} );
 
 	useEffect( () => {
 		if ( null === postId || null === postType ) {
 			return;
 		}
 
-		// Compute object type and ID from post type and ID.
-		const objectType = `postType/${ postType }`;
-		const objectId = postId.toString();
+		const awareness = getSyncManager()?.getAwareness(
+			`postType/${ postType }`,
+			postId.toString()
+		) as unknown as PostEditorAwareness | undefined;
 
-		const awareness = getSyncManager()?.getAwareness< PostEditorAwareness >(
-			objectType,
-			objectId
-		);
-
-		if ( ! awareness ) {
-			setState( defaultState );
-			return;
-		}
-
-		const unsubscribe = awareness?.onStateChange(
-			( activeUsers: ActiveUser[] ) => {
-				setState( {
-					activeUsers,
-					getAbsolutePositionIndex: ( selection: SelectionCursor ) =>
-						awareness.getAbsolutePositionIndex( selection ),
-					isCurrentUserDisconnected:
-						activeUsers.find( ( user ) => user.isMe )
-							?.isConnected === false,
-				} );
-			}
-		);
+		const unsubscribe = awareness?.onStateChange( ( newState ) => {
+			setState(
+				getPostEditorAwarenessState(
+					postId,
+					postType,
+					awareness,
+					newState
+				)
+			);
+		} );
 
 		return unsubscribe;
 	}, [ postId, postType ] );
